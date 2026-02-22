@@ -3,9 +3,10 @@ import { GramadevataController } from './gramadevata.controller';
 import { AuthModule } from './auth/auth.module';
 import { CommentsModule } from './comments/comments.module';
 import { VillagesModule } from './villages/villages.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
-  imports: [AuthModule, CommentsModule, VillagesModule],
+  imports: [AuthModule, CommentsModule, EventsModule, VillagesModule],
   controllers: [GramadevataController],
 })
 export class GramadevataModule {}
