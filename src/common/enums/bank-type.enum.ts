@@ -1,0 +1,6 @@
+export enum BankType {
+  PUBLIC = 'PUBLIC ',
+  PRIVATE = 'PRIVATE',
+  COOPERATIVE = 'CO-OPERATIVE',
+  GRAMEEN = 'GRAMEEN',
+}

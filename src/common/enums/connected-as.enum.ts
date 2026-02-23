@@ -1,0 +1,6 @@
+export enum ConnectedAs {
+  MEMBER = 'MEMBER',
+  PUJARI = 'PUJARI',
+  VOLUNTARY = 'VOLUNTARY',
+  PUJARI_VOLUNTARY = 'PUJARI/VOLUNTARY',
+}

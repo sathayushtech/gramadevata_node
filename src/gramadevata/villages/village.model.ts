@@ -1,6 +1,7 @@
 import { CreationOptional } from 'sequelize';
 import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
 import { Block } from '../../common/models/block.model';
+import { EntityStatus } from '../../common/enums';
 
 @Table({ tableName: 'village', timestamps: false })
 export class Village extends Model<Village> {
@@ -22,7 +23,7 @@ export class Village extends Model<Village> {
   @Column({ type: DataType.STRING(255), allowNull: true, field: 'map_url' })
   declare mapUrl?: string;
 
-  @Column({ type: DataType.STRING(50), allowNull: true, defaultValue: 'INACTIVE', field: 'status' })
+  @Column({ type: DataType.STRING(50), allowNull: true, defaultValue: EntityStatus.INACTIVE, field: 'status', validate: { isIn: [Object.values(EntityStatus)] } })
   declare status?: string;
 
   @Column({ type: DataType.STRING(15), allowNull: true, field: 'pin_code' })

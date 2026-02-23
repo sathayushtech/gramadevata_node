@@ -1,5 +1,6 @@
 import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
 import { Village } from '../villages/village.model';
+import { ActivityOption, EntityStatus, GeoSite } from '../../common/enums';
 
 @Table({ tableName: 'goshala', timestamps: false })
 export class Goshala extends Model<Goshala> {
@@ -21,10 +22,10 @@ export class Goshala extends Model<Goshala> {
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'reg_num' })
   declare regNum?: string;
 
-  @Column({ type: DataType.STRING(50), allowNull: true, field: 'status' })
+  @Column({ type: DataType.STRING(50), allowNull: true, defaultValue: EntityStatus.INACTIVE, field: 'status', validate: { isIn: [Object.values(EntityStatus)] } })
   declare status?: string;
 
-  @Column({ type: DataType.STRING(50), allowNull: true, field: 'geo_site' })
+  @Column({ type: DataType.STRING(50), allowNull: true, defaultValue: GeoSite.VILLAGE, field: 'geo_site', validate: { isIn: [Object.values(GeoSite)] } })
   declare geoSite?: string;
 
   @ForeignKey(() => Village)
@@ -94,22 +95,22 @@ export class Goshala extends Model<Goshala> {
   @Column({ type: DataType.STRING(100), allowNull: true, field: 'other_name' })
   declare otherName?: string;
 
-  @Column({ type: DataType.STRING(20), allowNull: true, field: 'devotees_visiting' })
+  @Column({ type: DataType.STRING(20), allowNull: true, defaultValue: ActivityOption.NO, field: 'devotees_visiting', validate: { isIn: [Object.values(ActivityOption)] } })
   declare devoteesVisiting?: string;
 
-  @Column({ type: DataType.STRING(20), allowNull: true, field: 'feeding_accessibility' })
+  @Column({ type: DataType.STRING(20), allowNull: true, defaultValue: ActivityOption.NO, field: 'feeding_accessibility', validate: { isIn: [Object.values(ActivityOption)] } })
   declare feedingAccessibility?: string;
 
-  @Column({ type: DataType.STRING(20), allowNull: true, field: 'inside_feeding_accessibility' })
+  @Column({ type: DataType.STRING(20), allowNull: true, defaultValue: ActivityOption.NO, field: 'inside_feeding_accessibility', validate: { isIn: [Object.values(ActivityOption)] } })
   declare insideFeedingAccessibility?: string;
 
-  @Column({ type: DataType.STRING(20), allowNull: true, field: 'outside_feeding_accessibility' })
+  @Column({ type: DataType.STRING(20), allowNull: true, defaultValue: ActivityOption.NO, field: 'outside_feeding_accessibility', validate: { isIn: [Object.values(ActivityOption)] } })
   declare outsideFeedingAccessibility?: string;
 
-  @Column({ type: DataType.STRING(20), allowNull: true, field: 'adoption_of_cow_or_bull_inside' })
+  @Column({ type: DataType.STRING(20), allowNull: true, defaultValue: ActivityOption.NO, field: 'adoption_of_cow_or_bull_inside', validate: { isIn: [Object.values(ActivityOption)] } })
   declare adoptionOfCowOrBullInside?: string;
 
-  @Column({ type: DataType.STRING(20), allowNull: true, field: 'adoption_of_cow_or_bull_outside' })
+  @Column({ type: DataType.STRING(20), allowNull: true, defaultValue: ActivityOption.NO, field: 'adoption_of_cow_or_bull_outside', validate: { isIn: [Object.values(ActivityOption)] } })
   declare adoptionOfCowOrBullOutside?: string;
 
   @Column({ type: DataType.STRING(100), allowNull: true, field: 'festivals' })

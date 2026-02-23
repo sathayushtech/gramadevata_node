@@ -1,4 +1,5 @@
 import { Column, DataType, Model, Table } from 'sequelize-typescript';
+import { EntityStatus } from '../../common/enums';
 
 @Table({ tableName: 'tour_guides', timestamps: false })
 export class TourGuide extends Model<TourGuide> {
@@ -32,7 +33,7 @@ export class TourGuide extends Model<TourGuide> {
   @Column({ type: DataType.STRING(15), allowNull: true, field: 'mobile' })
   declare mobile?: string;
 
-  @Column({ type: DataType.STRING(50), allowNull: true, field: 'status' })
+  @Column({ type: DataType.STRING(50), allowNull: true, defaultValue: EntityStatus.INACTIVE, field: 'status', validate: { isIn: [Object.values(EntityStatus)] } })
   declare status?: string;
 
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'event_id' })

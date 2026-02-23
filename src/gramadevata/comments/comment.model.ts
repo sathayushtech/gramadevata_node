@@ -29,6 +29,6 @@ export class Comment extends Model<Comment> {
   @Column({ type: DataType.DATE, allowNull: false, field: 'created_at', defaultValue: DataType.NOW })
   declare createdAt: Date;
 
-  @Column({ type: DataType.STRING(50), allowNull: false, field: 'status', defaultValue: CommentStatus.ACTIVE })
+  @Column({ type: DataType.STRING(50), allowNull: false, field: 'status', defaultValue: CommentStatus.ACTIVE, validate: { isIn: [Object.values(CommentStatus)] } })
   declare status: CommentStatus;
 }

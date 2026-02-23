@@ -4,7 +4,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import * as jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import { CreationAttributes, Op } from 'sequelize';
-import { User } from './user.model';
+import { Register } from './user.model';
 import { UserStatus } from '../../common/enums/user-status.enum';
 
 const ADMIN_USERNAMES = new Set(["sathayushtechsolutions@gmail.com", "7680822565"]);
@@ -24,8 +24,8 @@ type VerifyOtpResponse = {
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectModel(User)
-    private readonly userModel: typeof User,
+    @InjectModel(Register)
+    private readonly userModel: typeof Register,
     private readonly configService: ConfigService
   ) {}
 
@@ -55,7 +55,7 @@ export class AuthService {
         verificationOtp: otp,
         verificationOtpCreatedTime: new Date(),
         ...(isEmailUsername ? { email: username } : { contactNumber: username }),
-      } as CreationAttributes<User>;
+      } as CreationAttributes<Register>;
 
       user = await this.userModel.create(createPayload);
     }
@@ -116,7 +116,7 @@ export class AuthService {
     return {
       refresh: tokens.refresh,
       access: tokens.access,
-      username: user.username,
+      username: user.username ?? '',
       user_id: Number(user.id),
       is_member: user.isMember?.toLowerCase() === 'true',
       type: user.type ?? null,
@@ -152,7 +152,7 @@ export class AuthService {
     return `${trimmed}/${profilePic}`;
   }
 
-  private buildTokens(user: User) {
+  private buildTokens(user: Register) {
     const secret = this.configService.get<string>('JWT_SECRET') || 'change-me';
     const payload = {
       user_id: user.id,

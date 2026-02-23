@@ -1,4 +1,5 @@
 import { Column, DataType, Model, Table } from 'sequelize-typescript';
+import { ActivityOption, EntityStatus } from '../../common/enums';
 
 @Table({ tableName: 'temple_nearby_hotels', timestamps: false })
 export class TempleNearbyHotel extends Model<TempleNearbyHotel> {
@@ -29,7 +30,7 @@ export class TempleNearbyHotel extends Model<TempleNearbyHotel> {
   @Column({ type: DataType.STRING(255), allowNull: true, field: 'map_location' })
   declare mapLocation?: string;
 
-  @Column({ type: DataType.STRING(50), allowNull: true, field: 'status' })
+  @Column({ type: DataType.STRING(50), allowNull: true, defaultValue: EntityStatus.INACTIVE, field: 'status', validate: { isIn: [Object.values(EntityStatus)] } })
   declare status?: string;
 
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
@@ -62,6 +63,6 @@ export class TempleNearbyHotel extends Model<TempleNearbyHotel> {
   @Column({ type: DataType.TEXT, allowNull: true, field: 'license_copy' })
   declare licenseCopy?: string;
 
-  @Column({ type: DataType.STRING(20), allowNull: true, field: 'restaurent' })
+  @Column({ type: DataType.STRING(20), allowNull: true, defaultValue: ActivityOption.NO, field: 'restaurent', validate: { isIn: [Object.values(ActivityOption)] } })
   declare restaurent?: string;
 }

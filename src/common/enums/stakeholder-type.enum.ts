@@ -1,0 +1,7 @@
+export enum StakeholderType {
+  NONE = 'NONE',
+  SELLER = 'SELLER',
+  BUYER = 'BUYER',
+  SELLER_AND_BUYER = 'SELLER_AND_BUYER',
+  MARKETING_EXECUTIVE = 'MARKETING_EXECUTIVE',
+}
