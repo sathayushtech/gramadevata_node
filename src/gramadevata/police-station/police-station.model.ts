@@ -4,7 +4,7 @@ import { Village } from '../villages/village.model';
 import { Temple } from '../temple/temple.model';
 import { EntityStatus } from '../../common/enums';
 // import { Register } from '../auth/user.model';
-// import { TempleNearbyTourismPlace } from '../tourism/tourism-place.model';
+import { TempleNearbyTourismPlace } from '../tourism/tourism-place.model';
 
 @Table({ tableName: 'police_station', timestamps: false })
 export class PoliceStation extends Model<PoliceStation> {
