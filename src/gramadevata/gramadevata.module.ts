@@ -5,9 +5,10 @@ import { CommentsModule } from './comments/comments.module';
 import { VillagesModule } from './villages/villages.module';
 import { AccommodationsModule } from './accommodations/accommodations.module';
 import { EventsModule } from './events/events.module';
+import { WelfareModule } from './welfare/welfare.module';
 
 @Module({
-  imports: [AuthModule, CommentsModule, EventsModule, VillagesModule, AccommodationsModule],
+  imports: [AuthModule, CommentsModule, EventsModule, VillagesModule, AccommodationsModule, WelfareModule],
   controllers: [GramadevataController],
 })
 export class GramadevataModule {}

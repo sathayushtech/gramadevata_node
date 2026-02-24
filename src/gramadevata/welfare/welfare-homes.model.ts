@@ -4,7 +4,7 @@ import { Village } from '../villages/village.model';
 import { WelfareHomesCategory } from './welfare-homes-category.model';
 import { Country } from '../../common/models/country.model';
 import { ActivityOption, EntityStatus } from '../../common/enums';
-// import { Register } from '../auth/user.model';
+import { Register } from '../auth/user.model';
 
 @Table({ tableName: 'welfare_homes', timestamps: false })
 export class WelfareHomes extends Model<WelfareHomes> {
@@ -24,10 +24,34 @@ export class WelfareHomes extends Model<WelfareHomes> {
   @Column({ type: DataType.TEXT, allowNull: true, field: 'desc' })
   declare desc?: string;
 
-  @Column({ type: DataType.DATE, allowNull: true, field: 'created_at' })
+  @Column({ type: DataType.DATE, allowNull: false, field: 'created_at' })
   declare createdAt?: CreationOptional<Date>;
 
-  @Column({ type: DataType.JSON, allowNull: true, field: 'image_location' })
+  @Column({
+    type: DataType.TEXT('long'),
+    allowNull: true,
+    field: 'image_location',
+    get(this: WelfareHomes) {
+      const raw = this.getDataValue('imageLocation');
+      if (typeof raw !== 'string') return raw;
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return raw;
+      }
+    },
+    set(this: WelfareHomes, value: unknown) {
+      if (value === null || value === undefined) {
+        this.setDataValue('imageLocation', null);
+        return;
+      }
+      if (typeof value === 'string') {
+        this.setDataValue('imageLocation', value);
+        return;
+      }
+      this.setDataValue('imageLocation', JSON.stringify(value));
+    },
+  })
   declare imageLocation?: unknown;
 
   @ForeignKey(() => Village)
@@ -37,12 +61,12 @@ export class WelfareHomes extends Model<WelfareHomes> {
   @BelongsTo(() => Village)
   declare village?: Village;
 
-  // @ForeignKey(() => Register)
-  // @Column({ type: DataType.STRING(45), allowNull: true, field: 'user' })
-  // declare userId?: string;
+  @ForeignKey(() => Register)
+  @Column({ type: DataType.STRING(45), allowNull: true, field: 'user' })
+  declare userId?: string | null;
 
-  // @BelongsTo(() => Register)
-  // declare user?: Register;
+  @BelongsTo(() => Register)
+  declare user?: Register;
 
   @Column({ type: DataType.STRING(50), allowNull: true, defaultValue: EntityStatus.INACTIVE, field: 'status', validate: { isIn: [Object.values(EntityStatus)] } })
   declare status?: string;
@@ -130,8 +154,8 @@ export class WelfareHomes extends Model<WelfareHomes> {
   declare welfareFee?: string;
 
   @ForeignKey(() => Country)
-  @Column({ type: DataType.INTEGER, allowNull: true, field: 'country' })
-  declare countryId?: number;
+  @Column({ type: DataType.STRING(45), allowNull: true, field: 'country' })
+  declare countryId?: string | null;
 
   @BelongsTo(() => Country)
   declare country?: Country;

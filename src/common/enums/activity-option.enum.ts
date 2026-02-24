@@ -1,4 +1,4 @@
 export enum ActivityOption {
-  YES = 'Yes',
-  NO = 'No',
+  YES = 'YES',
+  NO = 'NO',
 }

@@ -19,11 +19,11 @@ export class WelfareHomesCategory extends Model<WelfareHomesCategory> {
   @Column({ type: DataType.TEXT, allowNull: true, field: 'desc' })
   declare desc?: string;
 
-  @Column({ type: DataType.DATE, allowNull: true, field: 'created_at' })
+  @Column({ type: DataType.DATE, allowNull: true, field: 'created_at' , defaultValue: DataType.NOW})
   declare createdAt?: CreationOptional<Date>;
 
   @Column({ type: DataType.STRING(500), allowNull: true, field: 'image_location' })
-  declare imageLocation?: string;
+  declare imageLocation?: string | null;
 
   @Column({ type: DataType.INTEGER, allowNull: true, field: 'priority' })
   declare priority?: number;
