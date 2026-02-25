@@ -15,8 +15,10 @@ import {
 } from '@nestjs/common';
 import { WelfareHomesService } from './welfare-homes.service';
 import { EntityStatus } from '../../common/enums';
+import { ApiTags } from '@nestjs/swagger';
 
 @Controller('gramadevata/welfare_home')
+@ApiTags('Welfare Homes')
 export class WelfareHomesController {
   constructor(private readonly welfareService: WelfareHomesService) {}
 
@@ -96,6 +98,7 @@ export class WelfareHomesController {
 }
 
 @Controller('gramadevata')
+@ApiTags('Welfare Homes')
 export class WelfareHomesExtraController {
   constructor(private readonly welfareService: WelfareHomesService) {}
 

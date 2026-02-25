@@ -12,8 +12,10 @@ import {
   Query,
 } from '@nestjs/common';
 import { AccommodationsService } from './accommodations.service';
+import { ApiTags } from '@nestjs/swagger';
 
 @Controller('gramadevata/accommodation')
+@ApiTags('Accommodations')
 export class AccommodationsController {
   constructor(private readonly accommodationsService: AccommodationsService) {}
 

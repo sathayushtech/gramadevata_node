@@ -11,8 +11,10 @@ import {
   Put,
 } from '@nestjs/common';
 import { WelfareHomesCategoryService } from './welfare-homes-category.service';
+import { ApiTags } from '@nestjs/swagger';
 
 @Controller('gramadevata/welfare_homes_category')
+@ApiTags('Welfare Homes Category')
 export class WelfareHomesCategoryController {
   constructor(private readonly categoryService: WelfareHomesCategoryService) {}
 

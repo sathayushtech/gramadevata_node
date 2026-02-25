@@ -10,7 +10,7 @@ import { Comment } from '../comments/comment.model';
 import { Goshala } from '../goshalas/goshala.model';
 import { Village } from '../villages/village.model';
 import { Event } from './event.model';
-import { NearbyHospital } from './nearby-hospital.model';
+import { NearbyHospital } from '../hospital/nearby-hospital.model';
 import { TempleNearbyHotel } from './temple-nearby-hotel.model';
 import { TempleNearbyRestaurant } from './temple-nearby-restaurant.model';
 import { TempleTransport } from './temple-transport.model';

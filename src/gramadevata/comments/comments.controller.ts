@@ -13,8 +13,10 @@ import {
 } from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { ApiTags } from '@nestjs/swagger';
 
 @Controller('gramadevata/comments')
+@ApiTags('Comments')
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 

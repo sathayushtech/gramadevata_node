@@ -1,7 +1,9 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { EventsService } from './events.service';
+import { ApiTags } from '@nestjs/swagger';
 
 @Controller('gramadevata/Events')
+@ApiTags('Events')
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
