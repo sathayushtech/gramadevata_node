@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
 
 @Injectable()
-export class JwtAuthGuard implements CanActivate {
+export class OptionalJwtAuthGuard implements CanActivate {
   constructor(private readonly configService: ConfigService) {}
 
   canActivate(context: ExecutionContext): boolean {
@@ -11,7 +11,8 @@ export class JwtAuthGuard implements CanActivate {
     const authHeader = request.headers?.authorization;
 
     if (!authHeader || typeof authHeader !== 'string') {
-      throw new UnauthorizedException('Authorization header is required');
+      request.user = undefined;
+      return true;
     }
 
     const [scheme, token] = authHeader.split(' ');
@@ -28,7 +29,7 @@ export class JwtAuthGuard implements CanActivate {
       const payload = jwt.verify(token, secret);
       request.user = payload;
       return true;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Invalid token');
     }
   }

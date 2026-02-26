@@ -1,6 +1,6 @@
 import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
 import { Event } from './event.model';
-import { User } from '../auth/user.model';
+import { Register as User } from '../auth/user.model';
 
 @Table({ tableName: 'add_event_details', timestamps: false })
 export class AddEventDetails extends Model<AddEventDetails> {

@@ -270,7 +270,10 @@ export class AuthService {
   }
 
   private buildTokens(user: User) {
-    const secret = this.configService.get<string>('JWT_SECRET') || 'change-me';
+    const secret =
+      this.configService.get<string>('JWT_SECRET') ||
+      this.configService.get<string>('SSO_JWT_SECRET') ||
+      'change-me';
     const payload = {
       user_id: user.id,
       username: user.username,

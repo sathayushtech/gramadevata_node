@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { BlobServiceClient } from '@azure/storage-blob';
-import nodemailer from 'nodemailer';
+import * as nodemailer from 'nodemailer';
 import { randomBytes } from 'crypto';
 
 export function coerceStringList(value: unknown): string[] {
