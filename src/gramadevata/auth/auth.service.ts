@@ -4,7 +4,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import * as jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import { CreationAttributes, Op } from 'sequelize';
-import { Register } from './user.model';
+import { Register as User } from './user.model';
 import { UserStatus } from '../../common/enums/user-status.enum';
 
 const ADMIN_USERNAMES = new Set(["sathayushtechsolutions@gmail.com", "7680822565"]);
@@ -24,8 +24,8 @@ type VerifyOtpResponse = {
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectModel(Register)
-    private readonly userModel: typeof Register,
+    @InjectModel(User)
+    private readonly userModel: typeof User,
     private readonly configService: ConfigService
   ) {}
 
@@ -55,7 +55,7 @@ export class AuthService {
         verificationOtp: otp,
         verificationOtpCreatedTime: new Date(),
         ...(isEmailUsername ? { email: username } : { contactNumber: username }),
-      } as CreationAttributes<Register>;
+      } as CreationAttributes<User>;
 
       user = await this.userModel.create(createPayload);
     }
@@ -125,6 +125,15 @@ export class AuthService {
     };
   }
 
+  async getAdminProfileById(id: string): Promise<Record<string, unknown> | null> {
+    const user = await this.userModel.findByPk(id);
+    if (!user) {
+      return null;
+    }
+
+    return this.toAdminProfileResponse(user);
+  }
+
   private generateOtp(length = 4) {
     const digits = '0123456789';
     let result = '';
@@ -152,7 +161,115 @@ export class AuthService {
     return `${trimmed}/${profilePic}`;
   }
 
-  private buildTokens(user: Register) {
+  private toAdminProfileResponse(user: User): Record<string, unknown> {
+    const plain = user.get({ plain: true }) as User & {
+      profilePic?: string;
+      familyImages?: unknown;
+      pujariCertificate?: unknown;
+      pujariIdImage?: string;
+      pujariVideo?: unknown;
+    };
+
+    const profilePic = this.resolveFilePath(plain.profilePic ?? null);
+    const familyImages = this.resolveFileList(plain.familyImages);
+    const pujariCertificate = this.resolveFileList(plain.pujariCertificate);
+    const pujariIdImage = this.resolveFilePath(plain.pujariIdImage ?? null);
+    const pujariVideo = this.resolveFileList(plain.pujariVideo);
+
+    return {
+      temples_count: 0,
+      id: plain.id,
+      full_name: plain.fullName ?? null,
+      surname: plain.surname ?? null,
+      gotram: plain.gotram ?? null,
+      father_name: plain.fatherName ?? null,
+      profile_pic: profilePic,
+      contact_number: plain.contactNumber ?? null,
+      gender: plain.gender ?? null,
+      dob: plain.dob ?? null,
+      type: plain.type ?? null,
+      pujari_certificate: pujariCertificate,
+      working_temple: plain.workingTemple ?? null,
+      is_member: plain.isMember ?? null,
+      Connections: [],
+      temples: [],
+      goshalas: [],
+      events: [],
+      family_images: familyImages,
+      email: plain.email ?? null,
+      account_type: plain.accountType ?? null,
+      mother_name: plain.motherName ?? null,
+      paternal_grandmother_name: plain.paternalGrandmotherName ?? null,
+      paternal_grandfather_name: plain.paternalGrandfatherName ?? null,
+      paternal_great_grandfather_name: plain.paternalGreatGrandfatherName ?? null,
+      paternal_great_grandmother_name: plain.paternalGreatGrandmotherName ?? null,
+      paternal_grandmother_father_name: plain.paternalGrandmotherFatherName ?? null,
+      paternal_grandmother_mother_name: plain.paternalGrandmotherMotherName ?? null,
+      maternal_grandfather_name: plain.maternalGrandfatherName ?? null,
+      maternal_grandmother_name: plain.maternalGrandmotherName ?? null,
+      maternal_great_grandfather_name: plain.maternalGreatGrandfatherName ?? null,
+      maternal_great_grandmother_name: plain.maternalGreatGrandmotherName ?? null,
+      maternal_grandmother_father_name: plain.maternalGrandmotherFatherName ?? null,
+      maternal_grandmother_mother_name: plain.maternalGrandmotherMotherName ?? null,
+      marital_status: plain.maritalStatus ?? null,
+      wife: plain.wife ?? null,
+      husband: plain.husband ?? null,
+      children: plain.children ?? null,
+      siblings: plain.siblings ?? null,
+      favorite: [],
+      voluntary_level: plain.voluntaryLevel ?? null,
+      pujari_expertise: plain.pujariExpertise ?? null,
+      pujari_id_type: plain.pujariIdType ?? null,
+      pujari_certificate_type: plain.pujariCertificateType ?? null,
+      pujari_id_image: pujariIdImage,
+      pujari_category: [],
+      pujari_sub_category: [],
+      issued_by: plain.issuedBy ?? null,
+      pujari_type: plain.pujariType ?? null,
+      pujari_video: pujariVideo,
+      pujari_category_detail: [],
+      pujari_sub_category_detail: [],
+      pujari_designation: plain.pujariDesignation ?? null,
+      visit_temples: [],
+    };
+  }
+
+  private resolveFilePath(pathValue: string | null) {
+    if (!pathValue) {
+      return null;
+    }
+
+    const base = this.configService.get<string>('FILE_URL')
+      || this.configService.get<string>('File_path')
+      || '';
+    if (!base) {
+      return pathValue;
+    }
+
+    const trimmed = base.endsWith('/') ? base.slice(0, -1) : base;
+    const cleaned = pathValue.startsWith('/') ? pathValue.slice(1) : pathValue;
+    return `${trimmed}/${cleaned}`;
+  }
+
+  private resolveFileList(value: unknown): string[] {
+    if (!value) {
+      return [];
+    }
+
+    const items = Array.isArray(value)
+      ? value
+      : typeof value === 'string'
+        ? value.replace(/[\[\]]/g, '').split(',')
+        : [value];
+
+    return items
+      .map((item) => String(item).replace(/['"]+/g, '').trim())
+      .filter(Boolean)
+      .map((item) => this.resolveFilePath(item) || item)
+      .filter((item): item is string => Boolean(item));
+  }
+
+  private buildTokens(user: User) {
     const secret = this.configService.get<string>('JWT_SECRET') || 'change-me';
     const payload = {
       user_id: user.id,

@@ -1,7 +1,7 @@
 import { CreationOptional } from 'sequelize';
 import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
-// import { PoojaStore } from './pooja-store.model';
-// import { Register } from '../auth/register.model';
+import { PoojaStore } from './pooja-store.model';
+import { Register as User } from '../auth/user.model';
 import { EntityStatus } from '../../common/enums';
 
 @Table({ tableName: 'add_more_pooja_store', timestamps: false })
@@ -16,19 +16,19 @@ export class AddMorePoojaStore extends Model<AddMorePoojaStore> {
   })
   declare id: CreationOptional<string>;
 
-  // @ForeignKey(() => PoojaStore)
-  // @Column({ type: DataType.STRING(45), allowNull: true, field: 'pooja_store_id' })
-  // declare poojaStoreId?: string;
+  @ForeignKey(() => PoojaStore)
+  @Column({ type: DataType.STRING(45), allowNull: true, field: 'pooja_store_id' })
+  declare poojaStoreId?: string;
 
-  // @BelongsTo(() => PoojaStore)
-  // declare poojaStore?: PoojaStore;
+  @BelongsTo(() => PoojaStore)
+  declare poojaStore?: PoojaStore;
 
-  // @ForeignKey(() => Register)
-  // @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
-  // declare userId?: string;
+  @ForeignKey(() => User)
+  @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
+  declare userId?: string;
 
-  // @BelongsTo(() => Register)
-  // declare user?: Register;
+  @BelongsTo(() => User)
+  declare user?: User;
 
   @Column({ type: DataType.TEXT, allowNull: true, field: 'desc' })
   declare desc?: string;

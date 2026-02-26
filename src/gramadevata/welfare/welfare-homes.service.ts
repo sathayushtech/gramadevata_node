@@ -147,6 +147,7 @@ export class WelfareHomesService {
         `Created Time: ${formatDjangoDateTime(now)}\n` +
         `Welfare Home ID: ${String(created.id)}\n` +
         `Welfare Home Name: ${created.name ?? ''}`,
+      recipients: [this.configService.get<string>('DEFAULT_FROM_EMAIL')].filter((email): email is string => typeof email === 'string' && email.trim().length > 0),
     });
 
     return this.toFullRaw(created);
@@ -218,6 +219,7 @@ export class WelfareHomesService {
         `Updated Time: ${formatDjangoDateTime(occurredAt)}\n` +
         `Welfare Home ID: ${String(instance.id)}\n` +
         `Welfare Home Name: ${instance.name ?? ''}`,
+      recipients: [this.configService.get<string>('DEFAULT_FROM_EMAIL')].filter((email): email is string => typeof email === 'string' && email.trim().length > 0),
     });
 
     return this.toFullProcessed(instance);

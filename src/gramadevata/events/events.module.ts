@@ -14,7 +14,7 @@ import { TempleNearbyHotel } from './temple-nearby-hotel.model';
 import { TempleNearbyRestaurant } from './temple-nearby-restaurant.model';
 import { TempleTransport } from './temple-transport.model';
 import { TourGuide } from './tour-guide.model';
-import { TourOperator } from './tour-operator.model';
+import { TourOperator } from '../tourism/tour-operator.model';
 import { EventsController } from './events.controller';
 import { EventsService } from './events.service';
 import { AddEventDetailsController } from './add-event-details.controller';

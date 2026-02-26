@@ -89,8 +89,26 @@ async function uploadToAzure(opts: AzureUploadOpts): Promise<string> {
   return blobName;
 }
 
-export async function saveImageToAzure(opts: Omit<AzureUploadOpts, 'extension'>): Promise<string> {
-  return uploadToAzure({ ...opts, extension: 'jpg', contentType: opts.contentType ?? 'image/jpeg' });
+type SaveImageOpts = Omit<AzureUploadOpts, 'extension' | 'contentType'> & {
+  extension?: string;
+  contentType?: string;
+};
+
+function resolveImageContentType(extension?: string) {
+  const normalized = (extension || 'jpg').toLowerCase();
+  if (normalized === 'webp') {
+    return 'image/webp';
+  }
+  if (normalized === 'png') {
+    return 'image/png';
+  }
+  return 'image/jpeg';
+}
+
+export async function saveImageToAzure(opts: SaveImageOpts): Promise<string> {
+  const extension = (opts.extension || 'jpg').toLowerCase();
+  const contentType = opts.contentType || resolveImageContentType(extension);
+  return uploadToAzure({ ...opts, extension, contentType });
 }
 
 export async function saveVideoToAzure(opts: Omit<AzureUploadOpts, 'extension'>): Promise<string> {
@@ -103,8 +121,10 @@ export async function saveEntityImagesToAzure(opts: {
   id: string;
   name: string;
   entityType: string;
+  extension?: string;
+  contentType?: string;
 }): Promise<string[]> {
-  const { configService, images, id, name, entityType } = opts;
+  const { configService, images, id, name, entityType, extension, contentType } = opts;
 
   const saved: string[] = [];
   for (const image of images) {
@@ -125,6 +145,43 @@ export async function saveEntityImagesToAzure(opts: {
         id,
         name,
         entityType,
+        extension,
+        contentType,
+      }),
+    );
+  }
+
+  return saved;
+}
+
+export async function saveEntityVideosToAzure(opts: {
+  configService: ConfigService;
+  videos: string[];
+  id: string;
+  name: string;
+  entityType: string;
+}): Promise<string[]> {
+  const { configService, videos, id, name, entityType } = opts;
+
+  const saved: string[] = [];
+  for (const video of videos) {
+    const raw = video?.trim();
+    if (!raw || raw.toLowerCase() === 'null') {
+      continue;
+    }
+
+    if (looksLikeStoredPath(raw, entityType)) {
+      saved.push(raw);
+      continue;
+    }
+
+    saved.push(
+      await saveVideoToAzure({
+        configService,
+        base64: raw,
+        id,
+        name,
+        entityType,
       }),
     );
   }
@@ -138,10 +195,10 @@ export function formatDjangoDateTime(date: Date): string {
 }
 
 export function getMailTransport(configService: ConfigService) {
-  const host = configService.get<string>('SMTP_HOST');
-  const port = Number(configService.get<string>('SMTP_PORT') || 465);
-  const user = configService.get<string>('SMTP_USER');
-  const pass = configService.get<string>('SMTP_PASS');
+  const host = configService.get<string>('EMAIL_HOST');
+  const port = Number(configService.get<string>('EMAIL_PORT'));
+  const user = configService.get<string>('EMAIL_HOST_USER');
+  const pass = configService.get<string>('EMAIL_HOST_PASSWORD');
 
   if (!host || !user || !pass) {
     return null;
@@ -150,24 +207,23 @@ export function getMailTransport(configService: ConfigService) {
   return nodemailer.createTransport({
     host,
     port,
-    secure: port === 465,
+    secure: configService.get<boolean>('EMAIL_USE_TLS'),
     auth: { user, pass },
   });
 }
 
-export async function sendAdminEmail(configService: ConfigService, opts: { subject: string; text: string }): Promise<void> {
+export async function sendAdminEmail(configService: ConfigService, opts: { subject: string; text: string, recipients: string[] }): Promise<void> {
   const transport = getMailTransport(configService);
-  const from = configService.get<string>('SMTP_FROM') || configService.get<string>('SMTP_USER') || '';
-  const to = configService.get<string>('ADMIN_EMAIL') || from;
+  const from = configService.get<string>('DEFAULT_FROM_EMAIL');
 
-  if (!transport || !to) {
+  if (!transport || !opts.recipients || !opts.recipients.length) {
     console.log(`${opts.subject}: ${opts.text}`);
     return;
   }
 
   await transport.sendMail({
     from,
-    to,
+    to: opts.recipients,
     subject: opts.subject,
     text: opts.text,
   });

@@ -6,8 +6,14 @@ import { VillagesModule } from './villages/villages.module';
 import { AccommodationsModule } from './accommodations/accommodations.module';
 import { EventsModule } from './events/events.module';
 import { WelfareModule } from './welfare/welfare.module';
-import { AddMoreHospitalsModule } from './hospital/add-more-hospitals.module';
+import { HospitalsModule } from './hospital/hospitals.module';
 import { GoshalasModule } from './goshalas/goshalas.module';
+import { HotelModule } from './hotel/hotel.module';
+import { PoojaStoreModule } from './pooja-store/pooja-store.module';
+import { RestaurantModule } from './restaurant/pooja-store.module';
+import { TempleModule } from './temple/temple.module';
+import { TourismModule } from './tourism/tourism.module';
+import { AmbulanceFacilityModule } from './ambulance/ambulance-facility.module';
 
 @Module({
   imports: [AuthModule, 
@@ -16,8 +22,15 @@ import { GoshalasModule } from './goshalas/goshalas.module';
     VillagesModule, 
     AccommodationsModule, 
     WelfareModule, 
-    AddMoreHospitalsModule,
-    GoshalasModule],
+    HospitalsModule,
+    GoshalasModule,
+    HotelModule,
+    PoojaStoreModule,
+    RestaurantModule,
+    TempleModule,
+    TourismModule,
+    AmbulanceFacilityModule
+  ],
   controllers: [GramadevataController],
 })
 export class GramadevataModule {}
