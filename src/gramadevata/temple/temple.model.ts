@@ -19,19 +19,13 @@ export class Temple extends Model<Temple> {
   })
   declare id: CreationOptional<string>;
 
-  // @ForeignKey(() => TempleCategory)
-  // @Column({ type: DataType.STRING(45), allowNull: true, field: 'category' })
-  // declare category?: string;
+  // Needed for Django parity in VillageSerializer temple partitioning.
+  // DB already has these columns; `synchronize` is disabled.
+  @Column({ type: DataType.STRING(45), allowNull: true, field: 'category' })
+  declare category?: string;
 
-  // @BelongsTo(() => TempleCategory)
-  // declare templeCategory?: TempleCategory;
-
-  // @ForeignKey(() => TemplePriority)
-  // @Column({ type: DataType.STRING(45), allowNull: true, field: 'priority' })
-  // declare priority?: string;
-
-  // @BelongsTo(() => TemplePriority)
-  // declare templePriority?: TemplePriority;
+  @Column({ type: DataType.STRING(45), allowNull: true, field: 'priority' })
+  declare priority?: string;
 
   @Column({ type: DataType.STRING(100), allowNull: true, field: 'name' })
   declare name?: string;

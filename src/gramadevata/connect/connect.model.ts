@@ -3,7 +3,7 @@ import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize
 import { Village } from '../villages/village.model';
 import { Temple } from '../temple/temple.model';
 import { ConnectedAs } from '../../common/enums';
-// import { Register } from '../auth/user.model';
+import { Register } from '../auth/user.model';
 
 @Table({ tableName: 'connect', timestamps: false })
 export class Connect extends Model<Connect> {
@@ -17,12 +17,12 @@ export class Connect extends Model<Connect> {
   })
   declare id: CreationOptional<string>;
 
-  // @ForeignKey(() => Register)
-  // @Column({ type: DataType.STRING(45), allowNull: true, field: 'user' })
-  // declare userId?: string;
+  @ForeignKey(() => Register)
+  @Column({ type: DataType.STRING(45), allowNull: true, field: 'user' })
+  declare userId?: string;
 
-  // @BelongsTo(() => Register)
-  // declare user?: Register;
+  @BelongsTo(() => Register)
+  declare user?: Register;
 
   @ForeignKey(() => Temple)
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'temple' })

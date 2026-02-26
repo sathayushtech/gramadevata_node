@@ -11,10 +11,48 @@ import { VillagesController } from './villages.controller';
 import { VillagesService } from './villages.service';
 import { AddVillageDetailsController } from './add-village-details.controller';
 import { AddVillageDetailsService } from './add-village-details.service';
+import { Geographic } from './village-geographic.model';
+import { VillageGeographicController } from './geographic/village-geographic.controller';
+import { VillageGeographicService } from './geographic/village-geographic.service';
+import { VillageFamousPersonality } from './village-famous-personality.model';
+import { VillageFamousPersonalitiesController } from './famous-personalities/village-famous-personalities.controller';
+import { VillageFamousPersonalitiesService } from './famous-personalities/village-famous-personalities.service';
+import { VillageDevelopmentFacility } from './village-development-facility.model';
+import { VillageDevelopmentFacilitiesController } from './development-facilities/village-development-facilities.controller';
+import { VillageDevelopmentFacilitiesService } from './development-facilities/village-development-facilities.service';
+import { Connect } from '../connect/connect.model';
+import { Temple } from '../temple/temple.model';
 
 @Module({
-  imports: [SequelizeModule.forFeature([Village, Block, District, State, Country, AddVillageDetails, User])],
-  controllers: [VillagesController, AddVillageDetailsController],
-  providers: [VillagesService, AddVillageDetailsService],
+  imports: [
+    SequelizeModule.forFeature([
+      Village,
+      Block,
+      District,
+      State,
+      Country,
+      AddVillageDetails,
+      User,
+      Geographic,
+      VillageFamousPersonality,
+      VillageDevelopmentFacility,
+      Connect,
+      Temple,
+    ]),
+  ],
+  controllers: [
+    VillagesController,
+    AddVillageDetailsController,
+    VillageGeographicController,
+    VillageFamousPersonalitiesController,
+    VillageDevelopmentFacilitiesController,
+  ],
+  providers: [
+    VillagesService,
+    AddVillageDetailsService,
+    VillageGeographicService,
+    VillageFamousPersonalitiesService,
+    VillageDevelopmentFacilitiesService,
+  ],
 })
 export class VillagesModule {}
