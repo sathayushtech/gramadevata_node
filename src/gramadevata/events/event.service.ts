@@ -13,6 +13,7 @@ import * as GramadevataUtils from '../../common/utils/gramadevata.utils';
 import { Goshala } from '../goshalas/goshala.model';
 import { Village } from '../villages/village.model';
 import { Event } from './event.model';
+import { EventCategory } from './event-category.model';
 import { NearbyHospital } from '../hospital/nearby-hospital.model';
 import { TempleNearbyHotel } from './temple-nearby-hotel.model';
 import { TempleNearbyRestaurant } from './temple-nearby-restaurant.model';
@@ -26,6 +27,10 @@ export class EventService {
   constructor(
     @InjectModel(Event)
     private readonly eventModel: typeof Event,
+    @InjectModel(EventCategory)
+    private readonly eventCategoryModel: typeof EventCategory,
+    @InjectModel(Village)
+    private readonly villageModel: typeof Village,
     @InjectModel(Comment)
     private readonly commentModel: typeof Comment,
     @InjectModel(User)
@@ -166,6 +171,57 @@ export class EventService {
           message: 'An error occurred.',
           error: error instanceof Error ? error.message : String(error),
         },
+      };
+    }
+  }
+
+  async createEventPost(payload: Record<string, unknown>, userPayload?: Record<string, unknown>) {
+    try {
+      const user = await this.resolveUser(userPayload);
+      if (!user) {
+        return { status: 404, body: { message: 'User not found.' } };
+      }
+
+      const memberFlag = (user.isMember || '').toString().toUpperCase();
+      if (memberFlag === 'NO' || memberFlag === 'FALSE') {
+        return {
+          status: 400,
+          body: {
+            message: 'Cannot add the temple. Membership details are required. Update your profile and become a member.',
+          },
+        };
+      }
+
+      const imageLocations = this.cleanUploadList(payload.image_location);
+
+      const createData = this.mapEventPayload(payload);
+      createData.imageLocation = [];
+      createData.userId = user.id;
+
+      const event = await this.eventModel.create(createData as CreationAttributes<Event>);
+
+      if (imageLocations.length) {
+        const savedImages = await GramadevataUtils.saveEntityImagesToAzure({
+          configService: this.configService,
+          images: imageLocations,
+          id: event.id,
+          name: event.name ?? 'event',
+          entityType: 'event',
+        });
+        if (savedImages.length) {
+          event.imageLocation = savedImages;
+          await event.save();
+        }
+      }
+
+      return {
+        status: 200,
+        body: { message: 'success', result: this.toEventRaw(event) },
+      };
+    } catch (error) {
+      return {
+        status: 500,
+        body: { message: 'An error occurred.', error: error instanceof Error ? error.message : String(error) },
       };
     }
   }
@@ -345,6 +401,143 @@ export class EventService {
     });
 
     return this.enrichEvents(events);
+  }
+
+  async listEventStatus(
+    query: Record<string, string | undefined>,
+    baseUrl?: string
+  ): Promise<Record<string, unknown>> {
+    const statusParam = query.status?.toUpperCase();
+    const allowedStatuses = ['UPCOMING', 'COMPLETED', 'ONGOING'];
+    if (statusParam && !allowedStatuses.includes(statusParam)) {
+      throw new BadRequestException('Invalid status value');
+    }
+
+    const allEvents = await this.eventModel.findAll();
+    await this.updateEventStatuses(allEvents);
+
+    const where: Record<string, unknown> = {};
+    if (statusParam) {
+      where.eventStatus = statusParam;
+    }
+
+    const page = this.normalizePage(query.page ?? query.page_no);
+    const pageSize = this.normalizePageSize(query.page_size ?? query.pageSize);
+    const offset = (page - 1) * pageSize;
+
+    const { count, rows } = await this.eventModel.findAndCountAll({
+      where,
+      include: this.getLocationInclude(),
+      order: this.getEventStatusOrder(),
+      limit: pageSize,
+      offset,
+    });
+
+    const results = await this.enrichEvents(rows);
+
+    return this.buildPaginatedResponse({
+      count,
+      page,
+      pageSize,
+      results,
+      baseUrl,
+      query,
+    });
+  }
+
+  async listInactiveEvents(query: Record<string, string | undefined>) {
+    const filters = this.buildEventFilters(query);
+    const searchQuery = query.search;
+
+    const where: Record<string, unknown> & { [Op.or]?: unknown } = {
+      ...filters,
+      status: 'INACTIVE',
+    };
+
+    if (searchQuery) {
+      where[Op.or] = [
+        { name: { [Op.like]: `%${searchQuery}%` } },
+        { address: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
+    const events = await this.eventModel.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+    });
+
+    if (!events.length) {
+      return { status: 404, body: { message: 'Data not found', status: 404 } };
+    }
+
+    const responses = await this.toInactiveResponses(events);
+
+    return {
+      status: 200,
+      count: responses.length,
+      event_upcoming: responses.filter((event) => event.event_status === 'UPCOMING'),
+      event_completed: responses.filter((event) => event.event_status === 'COMPLETED'),
+      event_ongoing: responses.filter((event) => event.event_status === 'ONGOING'),
+    };
+  }
+
+  async getInactiveEventByField(fieldName: string, inputValue: string): Promise<{ status: number; body: unknown }> {
+    const resolvedField = this.resolveEventFieldName(fieldName);
+    if (!resolvedField || !this.isEventField(resolvedField)) {
+      return {
+        status: 400,
+        body: {
+          message: `Invalid field name: '${fieldName}'`,
+          status: 400,
+        },
+      };
+    }
+
+    const events = await this.eventModel.findAll({
+      where: { [resolvedField]: inputValue, status: 'INACTIVE' },
+      include: this.getLocationInclude(),
+    });
+
+    if (!events.length) {
+      return { status: 404, body: { message: 'Event not found', status: 404 } };
+    }
+
+    return {
+      status: 200,
+      body: await this.enrichEvents(events),
+    };
+  }
+
+  async getEventsMain(): Promise<Record<string, unknown>> {
+    const [categories, villages] = await Promise.all([
+      this.eventCategoryModel.findAll({ limit: 4 }),
+      this.villageModel.findAll(),
+    ]);
+
+    const villageIds = villages.map((village: Village) => village.id);
+
+    const indianEvents = villageIds.length
+      ? await this.eventModel.findAll({
+        where: { objectId: { [Op.in]: villageIds } },
+        include: this.getLocationInclude(),
+        limit: 4,
+      })
+      : [];
+
+    const globalEvents = await this.eventModel.findAll({
+      where: {
+        ...(villageIds.length ? { objectId: { [Op.notIn]: villageIds } } : {}),
+        geoSite: { [Op.notIn]: ['S', 'D', 'B', 'V'] },
+      },
+      include: this.getLocationInclude(),
+      limit: 4,
+    });
+
+    return {
+      categories: categories.map((category: EventCategory) => this.toEventCategoryResponse(category)),
+      indianevents: await this.enrichEvents(indianEvents),
+      globalevents: await this.enrichEvents(globalEvents),
+    };
   }
 
   async getInactiveByLocation(
@@ -1150,6 +1343,7 @@ export class EventService {
 
     const email = typeof userPayload.email === 'string' ? userPayload.email : undefined;
     const contactNumber = typeof userPayload.contact_number === 'string' ? userPayload.contact_number : undefined;
+    const username = typeof userPayload.username === 'string' ? userPayload.username : undefined;
 
     if (email) {
       const user = await this.userModel.findOne({ where: { email } });
@@ -1160,6 +1354,13 @@ export class EventService {
 
     if (contactNumber) {
       const user = await this.userModel.findOne({ where: { contactNumber } });
+      if (user) {
+        return user;
+      }
+    }
+
+    if (username) {
+      const user = await this.userModel.findOne({ where: { username } });
       if (user) {
         return user;
       }
@@ -1182,5 +1383,259 @@ export class EventService {
         `Event Name: ${event.name ?? ''}`,
       recipients: [recipient],
     });
+  }
+
+  
+  private toEventRaw(event: Event) {
+    const plain = event.get({ plain: true }) as Event;
+    return {
+      _id: plain.id,
+      category: plain.category ?? null,
+      name: plain.name ?? null,
+      start_date: plain.startDate ?? null,
+      end_date: plain.endDate ?? null,
+      start_time: plain.startTime ?? null,
+      end_time: plain.endTime ?? null,
+      tag: plain.tag ?? null,
+      tag_id: plain.tagId ?? null,
+      tag_type_id: plain.tagTypeId ?? null,
+      created_at: plain.createdAt ?? null,
+      geo_site: plain.geoSite ?? null,
+      object_id: plain.objectId ?? null,
+      content_type_id: plain.contentTypeId ?? null,
+      map_location: plain.mapLocation ?? null,
+      address: plain.address ?? null,
+      contact_name: plain.contactName ?? null,
+      contact_phone: plain.contactPhone ?? null,
+      contact_email: plain.contactEmail ?? null,
+      desc: plain.desc ?? null,
+      status: plain.status ?? null,
+      user: plain.userId ?? null,
+      image_location: this.parseList(plain.imageLocation),
+      temple: plain.templeId ?? null,
+      event_status: plain.eventStatus ?? null,
+      event_video: this.parseList(plain.eventVideo),
+      organized_by: plain.organizedBy ?? null,
+      food: plain.food ?? null,
+      water: plain.water ?? null,
+      toilets: plain.toilets ?? null,
+      country_name: plain.countryName ?? null,
+      state_name: plain.stateName ?? null,
+      district_name: plain.districtName ?? null,
+      block_name: plain.blockName ?? null,
+      village_name: plain.villageName ?? null,
+      other_name: plain.otherName ?? null,
+      country: plain.countryId ?? null,
+    };
+  }
+
+  private getEventStatusOrder(): Order {
+    return [
+      [
+        literal(
+          "CASE WHEN event_status = 'UPCOMING' THEN 0 WHEN event_status = 'COMPLETED' THEN 1 ELSE 2 END"
+        ),
+        'ASC',
+      ],
+      ['startDate', 'ASC'],
+    ];
+  }
+
+  private buildPaginatedResponse(params: {
+    count: number;
+    page: number;
+    pageSize: number;
+    results: Record<string, unknown>[];
+    baseUrl?: string;
+    query: Record<string, string | undefined>;
+  }) {
+    const { count, page, pageSize, results, baseUrl, query } = params;
+    const totalPages = Math.ceil(count / pageSize) || 1;
+
+    const nextPage = page < totalPages ? page + 1 : null;
+    const prevPage = page > 1 ? page - 1 : null;
+
+    const next = nextPage ? this.buildPageLink(baseUrl, query, nextPage, pageSize) : null;
+    const previous = prevPage ? this.buildPageLink(baseUrl, query, prevPage, pageSize) : null;
+
+    return {
+      count,
+      next,
+      previous,
+      results,
+    };
+  }
+
+  private buildPageLink(
+    baseUrl: string | undefined,
+    query: Record<string, string | undefined>,
+    page: number,
+    pageSize: number
+  ) {
+    if (!baseUrl) {
+      return page;
+    }
+
+    const params = new URLSearchParams();
+    Object.entries(query).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '') {
+        return;
+      }
+      if (key === 'page' || key === 'page_no') {
+        return;
+      }
+      params.set(key, value);
+    });
+
+    params.set('page', String(page));
+    params.set('page_size', String(pageSize));
+
+    return `${baseUrl}?${params.toString()}`;
+  }
+
+  private normalizePage(value?: string) {
+    const page = Number.parseInt(value ?? '1', 10);
+    return Number.isNaN(page) || page < 1 ? 1 : page;
+  }
+
+  private normalizePageSize(value?: string) {
+    const size = Number.parseInt(value ?? '50', 10);
+    if (Number.isNaN(size) || size < 1) {
+      return 50;
+    }
+    return Math.min(size, 90);
+  }
+
+  private resolveEventFieldName(fieldName: string) {
+    if (fieldName === '_id') {
+      return 'id';
+    }
+
+    const mapping: Record<string, string> = {
+      category: 'category',
+      name: 'name',
+      start_date: 'startDate',
+      end_date: 'endDate',
+      start_time: 'startTime',
+      end_time: 'endTime',
+      tag: 'tag',
+      tag_id: 'tagId',
+      tag_type_id: 'tagTypeId',
+      geo_site: 'geoSite',
+      object_id: 'objectId',
+      content_type_id: 'contentTypeId',
+      map_location: 'mapLocation',
+      address: 'address',
+      contact_name: 'contactName',
+      contact_phone: 'contactPhone',
+      contact_email: 'contactEmail',
+      desc: 'desc',
+      status: 'status',
+      temple: 'templeId',
+      temple_id: 'templeId',
+      event_status: 'eventStatus',
+      event_video: 'eventVideo',
+      organized_by: 'organizedBy',
+      food: 'food',
+      water: 'water',
+      toilets: 'toilets',
+      country_name: 'countryName',
+      state_name: 'stateName',
+      district_name: 'districtName',
+      block_name: 'blockName',
+      village_name: 'villageName',
+      other_name: 'otherName',
+      country: 'countryId',
+      user: 'userId',
+      user_id: 'userId',
+    };
+
+    return mapping[fieldName] ?? fieldName;
+  }
+
+  private isEventField(fieldName: string) {
+    return Object.prototype.hasOwnProperty.call(this.eventModel.rawAttributes, fieldName);
+  }
+
+  private async toInactiveResponses(events: Event[]) {
+    const userIds = Array.from(
+      new Set(events.map((event) => event.userId).filter((id): id is string => Boolean(id)))
+    );
+
+    const users = userIds.length
+      ? await this.userModel.findAll({ where: { id: { [Op.in]: userIds } } })
+      : [];
+
+    const userMap = new Map(users.map((user) => [user.id, user.fullName ?? null]));
+
+    return events.map((event) => this.toEventInactiveResponse(event, userMap));
+  }
+
+  private toEventInactiveResponse(event: Event, userMap: Map<string, string | null>) {
+    const plain = event.get({ plain: true }) as Event;
+    const rawBaseUrl = this.configService.get<string>('File_path') || '';
+    const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+
+    return {
+      _id: plain.id,
+      category: plain.category ?? null,
+      name: plain.name ?? null,
+      start_date: plain.startDate ?? null,
+      end_date: plain.endDate ?? null,
+      start_time: plain.startTime ?? null,
+      end_time: plain.endTime ?? null,
+      tag: plain.tag ?? null,
+      tag_id: plain.tagId ?? null,
+      tag_type_id: plain.tagTypeId ?? null,
+      created_at: plain.createdAt ?? null,
+      geo_site: plain.geoSite ?? null,
+      object_id: plain.objectId ?? null,
+      content_type_id: plain.contentTypeId ?? null,
+      map_location: plain.mapLocation ?? null,
+      address: plain.address ?? null,
+      contact_name: plain.contactName ?? null,
+      contact_phone: plain.contactPhone ?? null,
+      contact_email: plain.contactEmail ?? null,
+      desc: plain.desc ?? null,
+      status: plain.status ?? null,
+      user: plain.userId ?? null,
+      image_location: this.mapFileList(plain.imageLocation, baseUrl),
+      temple: plain.templeId ?? null,
+      event_status: plain.eventStatus ?? null,
+      event_video: this.mapFileList(plain.eventVideo, baseUrl),
+      organized_by: plain.organizedBy ?? null,
+      food: plain.food ?? null,
+      water: plain.water ?? null,
+      toilets: plain.toilets ?? null,
+      country_name: plain.countryName ?? null,
+      state_name: plain.stateName ?? null,
+      district_name: plain.districtName ?? null,
+      block_name: plain.blockName ?? null,
+      village_name: plain.villageName ?? null,
+      other_name: plain.otherName ?? null,
+      country: plain.countryId ?? null,
+      user_full_name: plain.userId ? userMap.get(plain.userId) ?? null : null,
+      relative_time: plain.createdAt ? this.timeSince(plain.createdAt) : null,
+    };
+  }
+
+  private toEventCategoryResponse(category: EventCategory) {
+    const rawBaseUrl = this.configService.get<string>('FILE_URL')
+      || this.configService.get<string>('File_path')
+      || '';
+    const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+    const pic = category.pic
+      ? category.pic.startsWith('http')
+        ? category.pic
+        : `${baseUrl}/${category.pic.replace(/^\/+/, '')}`
+      : null;
+
+    return {
+      _id: category.id,
+      name: category.name,
+      desc: category.desc ?? null,
+      created_at: category.createdAt ?? null,
+      pic,
+    };
   }
 }

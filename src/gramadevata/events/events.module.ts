@@ -16,12 +16,18 @@ import { TempleNearbyRestaurant } from './temple-nearby-restaurant.model';
 import { TempleTransport } from './temple-transport.model';
 import { TourGuide } from './tour-guide.model';
 import { TourOperator } from '../tourism/tour-operator.model';
+import { EventCategory } from './event-category.model';
 import { EventsByLocationController } from './events-by-location.controller';
 import { EventService } from './event.service';
 import { AddEventDetailsController } from './add-event-details.controller';
 import { AddEventDetailsService } from './add-event-details.service';
 import { AddEventDetails } from './add-event-details.model';
 import { EventController } from './event.controller';
+import { EventCategoryController } from './event-category.controller';
+import { EventCategoryService } from './event-category.service';
+import { EventMergeController } from './event-merge.controller';
+import { EventPostController } from './event-post.controller';
+import { EventStatusController } from './event-status.controller';
 
 @Module({
   imports: [
@@ -43,9 +49,14 @@ import { EventController } from './event.controller';
       TourGuide,
       AddEventDetails,
       User,
+      EventCategory,
     ]),
   ],
-  controllers: [EventsByLocationController, AddEventDetailsController, EventController],
-  providers: [EventService, AddEventDetailsService],
+  controllers: [EventsByLocationController, AddEventDetailsController, EventController, EventCategoryController,
+    EventMergeController,
+    EventPostController,
+    EventStatusController,
+  ],
+  providers: [EventService, AddEventDetailsService, EventCategoryService],
 })
 export class EventsModule {}

@@ -3,9 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import type { CreationAttributes } from 'sequelize';
-import nodemailer from 'nodemailer';
 import { AddEventDetails } from './add-event-details.model';
 import { Register as User } from '../auth/user.model';
+import { Event } from './event.model';
 import * as GramadevataUtils from '../../common/utils/gramadevata.utils';
 
 type CreateResult = {
@@ -20,6 +20,8 @@ export class AddEventDetailsService {
     private readonly addEventDetailsModel: typeof AddEventDetails,
     @InjectModel(User)
     private readonly userModel: typeof User,
+    @InjectModel(Event)
+    private readonly eventModel: typeof Event,
     private readonly configService: ConfigService
   ) {}
 
@@ -129,6 +131,88 @@ export class AddEventDetailsService {
 
     await record.destroy();
     return true;
+  }
+
+  async mergeEventDetails(eventId: string, payload: Record<string, unknown>) {
+    try {
+      const event = await this.eventModel.findByPk(eventId);
+      if (!event) {
+        return { status: 404, body: { message: 'Event not found' } };
+      }
+
+      const newDesc = typeof payload.desc === 'string' ? payload.desc.trim() : '';
+      const newImages = this.parseList(payload.image_location).filter((img) => img && img !== 'null');
+      const newVideos = this.parseList(payload.event_video).filter((vid) => vid && vid !== 'null');
+      const newMapLocation = this.cleanMapLocation(payload.map_location);
+
+      const oldDesc = typeof event.desc === 'string' ? event.desc : '';
+      const oldImages = this.parseList(event.imageLocation).filter(Boolean);
+      const oldVideos = this.parseList(event.eventVideo).filter(Boolean);
+      const oldMapLocation = this.cleanMapLocation(event.mapLocation);
+
+      const details = await this.addEventDetailsModel.findAll({ where: { eventId: event.id } });
+
+      const detailDescs: string[] = [];
+      let detailImages: string[] = [];
+      let detailVideos: string[] = [];
+      let detailMapLocations: string[] = [];
+
+      details.forEach((record) => {
+        if (record.desc) {
+          detailDescs.push(record.desc.trim());
+        }
+        detailImages = detailImages.concat(this.parseList(record.imageLocation));
+        detailVideos = detailVideos.concat(this.parseList(record.eventVideo));
+        detailMapLocations = detailMapLocations.concat(this.cleanMapLocation(record.mapLocation));
+      });
+
+      const mergedDesc = this.uniqueList([oldDesc, ...detailDescs, newDesc].filter(Boolean)).join(', ');
+      const mergedImages = this.uniqueList([...oldImages, ...detailImages, ...newImages]);
+      const mergedVideos = this.uniqueList([...oldVideos, ...detailVideos, ...newVideos]);
+      const mergedMapLocation = this.cleanMapLocation([
+        ...oldMapLocation,
+        ...detailMapLocations,
+        ...newMapLocation,
+      ]);
+
+      event.desc = mergedDesc || undefined;
+      event.imageLocation = mergedImages;
+      event.eventVideo = mergedVideos;
+      event.mapLocation = mergedMapLocation.length ? JSON.stringify(mergedMapLocation) : undefined;
+      event.status = 'ACTIVE';
+      await event.save();
+
+      await this.addEventDetailsModel.destroy({ where: { eventId: event.id } });
+
+      await this.addEventDetailsModel.create({
+        eventId: event.id,
+        desc: mergedDesc || undefined,
+        imageLocation: mergedImages,
+        eventVideo: mergedVideos,
+        mapLocation: mergedMapLocation.length ? JSON.stringify(mergedMapLocation) : undefined,
+        status: 'ACTIVE',
+      } as CreationAttributes<AddEventDetails>);
+
+      const baseUrl = this.getBaseUrl();
+
+      return {
+        status: 200,
+        body: {
+          event_id: event.id,
+          name: event.name ?? null,
+          desc: mergedDesc,
+          image_location: mergedImages.map((img) => `${baseUrl}${img}`),
+          event_video: mergedVideos.map((vid) => `${baseUrl}${vid}`),
+          map_location: mergedMapLocation,
+          status: 'ACTIVE',
+        },
+      };
+    } catch (error) {
+      return {
+        status: 500,
+        body: { message: 'Error occurred', error: error instanceof Error ? error.message : String(error) },
+      };
+    }
   }
 
   private async findUser(userPayload?: Record<string, unknown>) {
@@ -328,6 +412,61 @@ export class AddEventDetailsService {
     return [];
   }
 
+  private cleanMapLocation(raw: unknown): string[] {
+    const results: string[] = [];
+
+    const visit = (value: unknown) => {
+      if (!value) {
+        return;
+      }
+
+      if (Array.isArray(value)) {
+        value.forEach(visit);
+        return;
+      }
+
+      if (typeof value === 'string') {
+        let trimmed = value.trim();
+        if (!trimmed) {
+          return;
+        }
+
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            visit(parsed);
+            return;
+          } catch {
+            // fall through
+          }
+        }
+
+        trimmed = trimmed.replace(/\\/g, '').replace(/['"]+/g, '');
+        const match = trimmed.match(/https:\/\/maps\.app\.goo\.gl\/\S+/);
+        if (match) {
+          results.push(match[0]);
+        }
+      }
+    };
+
+    visit(raw);
+    return this.uniqueList(results);
+  }
+
+  private uniqueList(values: string[]) {
+    return Array.from(new Set(values.filter(Boolean)));
+  }
+
+  private getBaseUrl() {
+    const raw = this.configService.get<string>('FILE_URL')
+      || this.configService.get<string>('File_path')
+      || '';
+    if (!raw) {
+      return '';
+    }
+    return raw.endsWith('/') ? raw : `${raw}/`;
+  }
+
   private mapFileList(raw: unknown) {
     const list = this.parseList(raw);
     const baseUrl = this.configService.get<string>('File_path');
@@ -374,24 +513,6 @@ export class AddEventDetailsService {
       subject,
       text: body,
       recipients: recipient ? [recipient] : [],
-    });
-  }
-
-  private getMailTransport() {
-    const host = this.configService.get<string>('EMAIL_HOST');
-    const port = Number(this.configService.get<string>('EMAIL_PORT'));
-    const user = this.configService.get<string>('EMAIL_HOST_USER');
-    const pass = this.configService.get<string>('EMAIL_HOST_PASSWORD');
-
-    if (!host || !user || !pass) {
-      return null;
-    }
-
-    return nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: { user, pass },
     });
   }
 }
