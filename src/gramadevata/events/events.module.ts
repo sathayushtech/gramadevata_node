@@ -10,21 +10,24 @@ import { Goshala } from '../goshalas/goshala.model';
 import { Event } from './event.model';
 import { Register as User } from '../auth/user.model';
 import { NearbyHospital } from '../hospital/nearby-hospital.model';
+import { Temple } from '../temple/temple.model';
 import { TempleNearbyHotel } from './temple-nearby-hotel.model';
 import { TempleNearbyRestaurant } from './temple-nearby-restaurant.model';
 import { TempleTransport } from './temple-transport.model';
 import { TourGuide } from './tour-guide.model';
 import { TourOperator } from '../tourism/tour-operator.model';
-import { EventsController } from './events.controller';
-import { EventsService } from './events.service';
+import { EventsByLocationController } from './events-by-location.controller';
+import { EventService } from './event.service';
 import { AddEventDetailsController } from './add-event-details.controller';
 import { AddEventDetailsService } from './add-event-details.service';
 import { AddEventDetails } from './add-event-details.model';
+import { EventController } from './event.controller';
 
 @Module({
   imports: [
     SequelizeModule.forFeature([
       Event,
+      Temple,
       Village,
       Block,
       District,
@@ -42,7 +45,7 @@ import { AddEventDetails } from './add-event-details.model';
       User,
     ]),
   ],
-  controllers: [EventsController, AddEventDetailsController],
-  providers: [EventsService, AddEventDetailsService],
+  controllers: [EventsByLocationController, AddEventDetailsController, EventController],
+  providers: [EventService, AddEventDetailsService],
 })
 export class EventsModule {}

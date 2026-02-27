@@ -1,12 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
+import { CreationAttributes, Op, literal, Order } from 'sequelize';
 import { CommentStatus } from '../../common/enums/comment-status.enum';
 import { Block } from '../block/block.model';
 import { Country } from '../../common/models/country.model';
 import { District } from '../../common/models/district.model';
 import { State } from '../../common/models/state.model';
 import { Comment } from '../comments/comment.model';
+import { Register as User } from '../auth/user.model';
+import * as GramadevataUtils from '../../common/utils/gramadevata.utils';
 import { Goshala } from '../goshalas/goshala.model';
 import { Village } from '../villages/village.model';
 import { Event } from './event.model';
@@ -16,16 +19,21 @@ import { TempleNearbyRestaurant } from './temple-nearby-restaurant.model';
 import { TempleTransport } from './temple-transport.model';
 import { TourGuide } from './tour-guide.model';
 import { TourOperator } from '../tourism/tour-operator.model';
+import { Temple } from '../temple/temple.model';
 
 @Injectable()
-export class EventsService {
+export class EventService {
   constructor(
     @InjectModel(Event)
     private readonly eventModel: typeof Event,
     @InjectModel(Comment)
     private readonly commentModel: typeof Comment,
+    @InjectModel(User)
+    private readonly userModel: typeof User,
     @InjectModel(Goshala)
     private readonly goshalaModel: typeof Goshala,
+    @InjectModel(Temple)
+    private readonly templeModel: typeof Temple,
     @InjectModel(NearbyHospital)
     private readonly nearbyHospitalModel: typeof NearbyHospital,
     @InjectModel(TempleTransport)
@@ -40,6 +48,196 @@ export class EventsService {
     private readonly tourGuideModel: typeof TourGuide,
     private readonly configService: ConfigService
   ) {}
+
+  async listEvents(query: Record<string, string | undefined>): Promise<Record<string, unknown>> {
+    const filters = this.buildEventFilters(query);
+    filters.status = 'ACTIVE';
+
+    let events = await this.eventModel.findAll({
+      where: filters,
+      include: this.getLocationInclude(),
+    });
+
+    if (!events.length) {
+      return { message: 'Data not found', status: 404 };
+    }
+
+    await this.updateEventStatuses(events);
+
+    events = await this.eventModel.findAll({
+      where: filters,
+      include: this.getLocationInclude(),
+    });
+
+    if (!Object.keys(query).length) {
+      const upcoming = events.filter((event) => event.eventStatus === 'UPCOMING');
+      const ongoing = events.filter((event) => event.eventStatus === 'ONGOING');
+      const completed = events.filter((event) => event.eventStatus === 'COMPLETED');
+
+      return {
+        status: 200,
+        event_upcoming: await this.enrichEventsWithNearbyTemples(upcoming),
+        event_ongoing: await this.enrichEventsWithNearbyTemples(ongoing),
+        event_completed: await this.enrichEventsWithNearbyTemples(completed),
+      };
+    }
+
+    return this.enrichEventsWithNearbyTemples(events) as unknown as Record<string, unknown>;
+  }
+
+  async getEventById(id: string): Promise<Record<string, unknown> | null> {
+    const event = await this.eventModel.findByPk(id, {
+      include: this.getLocationInclude(),
+    });
+
+    if (!event) {
+      return null;
+    }
+
+    return this.toEventResponse(event);
+  }
+
+  async createEvent(payload: Record<string, unknown>, userPayload?: Record<string, unknown>): Promise<Record<string, unknown>> {
+    try {
+      const user = await this.resolveUser(userPayload);
+      if (!user) {
+        return { status: 404, body: { message: 'User not found.' } };
+      }
+
+      if ((user.isMember || '').toLowerCase() === 'false') {
+        return {
+          status: 400,
+          body: {
+            message:
+              'Cannot add Event. Membership required. Update your profile and become a member to add an event.',
+          },
+        };
+      }
+
+      const imageLocations = this.cleanUploadList(payload.image_location);
+      const eventVideos = this.cleanUploadList(payload.event_video);
+
+      const createData = this.mapEventPayload(payload);
+      createData.imageLocation = [];
+      createData.eventVideo = [];
+      createData.userId = user.id;
+
+      const event = await this.eventModel.create(createData as CreationAttributes<Event>);
+
+      if (imageLocations.length) {
+        const savedImages = await GramadevataUtils.saveEntityImagesToAzure({
+          configService: this.configService,
+          images: imageLocations,
+          id: event.id,
+          name: event.name ?? 'event',
+          entityType: 'events',
+        });
+        if (savedImages.length) {
+          event.imageLocation = savedImages;
+        }
+      }
+
+      if (eventVideos.length) {
+        const savedVideos = await GramadevataUtils.saveEntityVideosToAzure({
+          configService: this.configService,
+          videos: eventVideos,
+          id: event.id,
+          name: event.name ?? 'event',
+          entityType: 'events',
+        });
+        if (savedVideos.length) {
+          event.eventVideo = savedVideos;
+        }
+      }
+
+      event.eventStatus = this.computeEventStatus(event.startDate, event.startTime, event.endDate, event.endTime);
+      await event.save();
+
+      await this.sendEventNotification('New Event Added', user.id, event);
+
+      return {
+        status: 201,
+        body: { message: 'success', result: await this.toEventResponse(event) },
+      };
+    } catch (error) {
+      return {
+        status: 500,
+        body: {
+          message: 'An error occurred.',
+          error: error instanceof Error ? error.message : String(error),
+        },
+      };
+    }
+  }
+
+  async updateEvent(id: string, payload: Record<string, unknown>, userPayload?: Record<string, unknown>): Promise<Record<string, unknown>> {
+    try {
+      const user = await this.resolveUser(userPayload);
+      if (!user) {
+        return { status: 404, body: { message: 'User not found.' } };
+      }
+
+      if ((user.isMember || '').toLowerCase() === 'false') {
+        return {
+          status: 400,
+          body: {
+            message:
+              'Cannot update Event. Membership details are required. Update your profile and become a member to update Event.',
+          },
+        };
+      }
+
+      const event = await this.eventModel.findByPk(id);
+      if (!event) {
+        return { status: 404, body: { message: 'Object not found' } };
+      }
+
+      const updateData = this.mapEventPayload(payload);
+      await event.update(updateData);
+
+      const imageLocations = this.cleanUploadList(payload.image_location);
+      if (imageLocations.length && !imageLocations.includes('null')) {
+        const savedImages = await GramadevataUtils.saveEntityImagesToAzure({
+          configService: this.configService,
+          images: imageLocations,
+          id: event.id,
+          name: event.name ?? 'event',
+          entityType: 'events',
+        });
+        if (savedImages.length) {
+          event.imageLocation = savedImages;
+        }
+      }
+
+      event.eventStatus = this.computeEventStatus(event.startDate, event.startTime, event.endDate, event.endTime);
+      await event.save();
+
+      await this.sendEventNotification('Event Updated', user.id, event);
+
+      return {
+        status: 200,
+        body: { message: 'updated successfully', data: await this.toEventResponse(event) },
+      };
+    } catch (error) {
+      return {
+        status: 500,
+        body: {
+          message: 'An error occurred.',
+          error: error instanceof Error ? error.message : String(error),
+        },
+      };
+    }
+  }
+
+  async removeEvent(id: string): Promise<boolean> {
+    const event = await this.eventModel.findByPk(id);
+    if (!event) {
+      return false;
+    }
+
+    await event.destroy();
+    return true;
+  }
 
   async getByState(stateId: string): Promise<Record<string, unknown>[]> {
     const events = await this.eventModel.findAll({
@@ -149,12 +347,64 @@ export class EventsService {
     return this.enrichEvents(events);
   }
 
+  async getInactiveByLocation(
+    inputValue?: string,
+    category?: string
+  ): Promise<{ status: number; event_upcoming: Record<string, unknown>[]; event_completed: Record<string, unknown>[] }> {
+    if (!inputValue && !category) {
+      throw new BadRequestException('At least one of input_value or category must be provided.');
+    }
+
+    const include = this.getLocationInclude();
+    const order = this.getEventOrder();
+
+    let events = await this.eventModel.findAll({
+      where: this.buildLocationWhere(inputValue, category),
+      include,
+      order,
+    });
+
+    if (!events.length && inputValue) {
+      events = await this.eventModel.findAll({
+        where: this.buildFallbackWhere(inputValue, category),
+        include,
+        order,
+      });
+    }
+
+    const inactive = events.filter((event) => event.status === 'INACTIVE');
+    const enriched = await this.enrichEvents(inactive);
+
+    return {
+      status: 200,
+      event_upcoming: enriched.filter((event) => event.event_status === 'UPCOMING'),
+      event_completed: enriched.filter((event) => event.event_status === 'COMPLETED'),
+    };
+  }
+
   private async enrichEvents(events: Event[]) {
     const enriched = [];
     for (const event of events) {
       enriched.push(await this.toEventResponse(event));
     }
     return enriched;
+  }
+
+  private async enrichEventsWithNearbyTemples(events: Event[]) {
+    const rawBaseUrl = this.configService.get<string>('File_path') || '';
+    const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+    const results = [];
+
+    for (const event of events) {
+      const response = await this.toEventResponse(event);
+      const nearbyTemples = await this.getNearbyTemples(event, baseUrl);
+      results.push({
+        ...response,
+        nearby_temples: nearbyTemples,
+      });
+    }
+
+    return results;
   }
 
   private async toEventResponse(event: Event) {
@@ -456,6 +706,54 @@ export class EventsService {
     });
   }
 
+  private async getNearbyTemples(event: Event, baseUrl: string) {
+    const ICONIC_ID = 'd7df749f-97e8-4635-a211-371c44b3c31f';
+    const FAMOUS_ID = '630f3239-f515-47fb-be8d-db727b9f2174';
+    const GRAMADEVATA_ID = '742ccfe6-d0b5-11ee-84bd-0242ac110002';
+
+    const village = event.village as Village | undefined;
+    const block = village?.block;
+
+    let temples = await this.templeModel.findAll({
+      include: this.getLocationInclude(),
+    });
+
+    if (village) {
+      temples = temples.filter((temple) => temple.objectId === village.id);
+    } else if (block) {
+      temples = temples.filter((temple) => (temple.village as Village | undefined)?.blockId === block.id);
+    }
+
+    const iconic = temples.filter((temple) => temple.priorityId === ICONIC_ID);
+    const famous = temples.filter((temple) => temple.priorityId === FAMOUS_ID);
+    const gramadevata = temples.filter((temple) => temple.categoryId === GRAMADEVATA_ID);
+
+    const excludeIds = new Set([
+      ...iconic.map((temple) => temple.id),
+      ...famous.map((temple) => temple.id),
+      ...gramadevata.map((temple) => temple.id),
+    ]);
+
+    const other = temples.filter((temple) => !excludeIds.has(temple.id));
+
+    const mapTempleList = (list: Temple[]) =>
+      list.map((temple) => {
+        const plain = temple.get({ plain: true }) as Temple;
+        return {
+          _id: plain.id,
+          name: plain.name ?? null,
+          image_location: this.mapFileList(plain.imageLocation, baseUrl),
+        };
+      });
+
+    return {
+      iconic_temples: mapTempleList(iconic),
+      famous_temples: mapTempleList(famous),
+      gramadevata_temples: mapTempleList(gramadevata),
+      other_temples: mapTempleList(other),
+    };
+  }
+
   private async getNearbyGoshalas(event: Event, baseUrl: string) {
     const village = event.village as Village | undefined;
     const blockId = village?.blockId;
@@ -652,5 +950,237 @@ export class EventsService {
       event_id: plain.eventId ?? null,
       image_location: this.mapFileList(plain.imageLocation, baseUrl),
     };
+  }
+
+  private getLocationInclude() {
+    return [
+      {
+        model: Village,
+        required: false,
+        include: [
+          {
+            model: Block,
+            required: false,
+            include: [
+              {
+                model: District,
+                required: false,
+                include: [
+                  {
+                    model: State,
+                    required: false,
+                    include: [{ model: Country, required: false }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+  }
+
+  private getEventOrder(): Order {
+    const today = new Date().toISOString().slice(0, 10);
+    return [
+      [
+        literal(
+          `CASE WHEN start_date >= '${today}' THEN 0 WHEN start_date < '${today}' THEN 1 ELSE 2 END`
+        ),
+        'ASC',
+      ],
+      ['startDate', 'ASC'],
+    ];
+  }
+
+  private buildLocationWhere(inputValue?: string, category?: string) {
+    const where: Record<string, unknown> & { [Op.or]?: unknown } = {};
+    if (category) {
+      where.category = category;
+    }
+    if (inputValue) {
+      where[Op.or] = [
+        { '$village.block.district.state.country.id$': inputValue },
+        { '$village.block.district.state.id$': inputValue },
+        { '$village.block.district.id$': inputValue },
+        { '$village.block.id$': inputValue },
+        { '$village.id$': inputValue },
+      ];
+    }
+    return where;
+  }
+
+  private buildFallbackWhere(inputValue?: string, category?: string) {
+    const where: Record<string, unknown> = {};
+    if (inputValue) {
+      where.objectId = inputValue;
+    }
+    if (category) {
+      where.category = category;
+    }
+    return where;
+  }
+
+  private buildEventFilters(query: Record<string, string | undefined>) {
+    const filters: Record<string, string> = {};
+
+    Object.entries(query).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '') {
+        return;
+      }
+      if (['page', 'page_size', 'pageSize', 'page_no', 'ordering'].includes(key)) {
+        return;
+      }
+
+      if (key === '_id') {
+        filters.id = value;
+        return;
+      }
+
+      filters[key] = value;
+    });
+
+    return filters;
+  }
+
+  private cleanUploadList(value: unknown) {
+    return GramadevataUtils.coerceStringList(value).filter((item) => item && item !== 'null');
+  }
+
+  private mapEventPayload(payload: Record<string, unknown>) {
+    const data: Partial<Event> = {};
+    const mappings: Record<string, string> = {
+      category: 'category',
+      name: 'name',
+      start_date: 'startDate',
+      end_date: 'endDate',
+      start_time: 'startTime',
+      end_time: 'endTime',
+      tag: 'tag',
+      tag_id: 'tagId',
+      tag_type_id: 'tagTypeId',
+      geo_site: 'geoSite',
+      object_id: 'objectId',
+      content_type_id: 'contentTypeId',
+      map_location: 'mapLocation',
+      address: 'address',
+      contact_name: 'contactName',
+      contact_phone: 'contactPhone',
+      contact_email: 'contactEmail',
+      desc: 'desc',
+      status: 'status',
+      temple: 'templeId',
+      temple_id: 'templeId',
+      event_status: 'eventStatus',
+      organized_by: 'organizedBy',
+      food: 'food',
+      water: 'water',
+      toilets: 'toilets',
+      country_name: 'countryName',
+      state_name: 'stateName',
+      district_name: 'districtName',
+      block_name: 'blockName',
+      village_name: 'villageName',
+      other_name: 'otherName',
+      country: 'countryId',
+    };
+
+    Object.entries(mappings).forEach(([inputKey, modelKey]) => {
+      if (payload[inputKey] !== undefined) {
+        (data as Record<string, unknown>)[modelKey] = payload[inputKey];
+      }
+    });
+
+    return data;
+  }
+
+  private computeEventStatus(
+    startDate?: string,
+    startTime?: string,
+    endDate?: string,
+    endTime?: string
+  ) {
+    if (!startDate || !startTime || !endDate || !endTime) {
+      return 'UPCOMING';
+    }
+
+    const startMs = this.toZonedEpochMs(startDate, startTime);
+    const endMs = this.toZonedEpochMs(endDate, endTime);
+    if (startMs === null || endMs === null) {
+      return 'UPCOMING';
+    }
+
+    const now = Date.now();
+    if (now < startMs) {
+      return 'UPCOMING';
+    }
+    if (now >= startMs && now <= endMs) {
+      return 'ONGOING';
+    }
+    return 'COMPLETED';
+  }
+
+  private async updateEventStatuses(events: Event[]) {
+    for (const event of events) {
+      const status = this.computeEventStatus(
+        event.startDate,
+        event.startTime,
+        event.endDate,
+        event.endTime
+      );
+      if (event.eventStatus !== status) {
+        event.eventStatus = status;
+        await event.save();
+      }
+    }
+  }
+
+  private async resolveUser(userPayload?: Record<string, unknown>) {
+    if (!userPayload) {
+      return null;
+    }
+
+    const userId = userPayload.user_id ?? userPayload.id;
+    if (userId) {
+      const user = await this.userModel.findByPk(String(userId));
+      if (user) {
+        return user;
+      }
+    }
+
+    const email = typeof userPayload.email === 'string' ? userPayload.email : undefined;
+    const contactNumber = typeof userPayload.contact_number === 'string' ? userPayload.contact_number : undefined;
+
+    if (email) {
+      const user = await this.userModel.findOne({ where: { email } });
+      if (user) {
+        return user;
+      }
+    }
+
+    if (contactNumber) {
+      const user = await this.userModel.findOne({ where: { contactNumber } });
+      if (user) {
+        return user;
+      }
+    }
+
+    return null;
+  }
+
+  private async sendEventNotification(subject: string, userId: string, event: Event) {
+    const recipient = this.configService.get<string>('EMAIL_HOST_USER');
+    if (!recipient) {
+      return;
+    }
+
+    await GramadevataUtils.sendAdminEmail(this.configService, {
+      subject,
+      text: `User ID: ${userId}\n` +
+        `Created Time: ${new Date().toISOString().slice(0, 19).replace('T', ' ')}\n` +
+        `Event ID: ${event.id}\n` +
+        `Event Name: ${event.name ?? ''}`,
+      recipients: [recipient],
+    });
   }
 }

@@ -15,6 +15,12 @@ export class District extends Model<District> {
   @Column({ type: DataType.STRING(45), allowNull: false, field: 'name' })
   declare name: string;
 
+  @Column({ type: DataType.TEXT, allowNull: true, field: 'desc' })
+  declare desc?: string;
+
+  @Column({ type: DataType.TEXT, allowNull: true, field: 'image_location' })
+  declare imageLocation?: string;
+
   @ForeignKey(() => State)
   @Column({ type: DataType.STRING(45), allowNull: false, field: 'state_id' })
   declare stateId: string;

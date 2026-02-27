@@ -3,7 +3,7 @@ import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize
 import { Village } from '../villages/village.model';
 import { Temple } from '../temple/temple.model';
 import { EntityStatus } from '../../common/enums';
-// import { Register } from '../auth/user.model';
+import { Register as User } from '../auth/user.model';
 
 @Table({ tableName: 'fire_station', timestamps: false })
 export class FireStation extends Model<FireStation> {
@@ -15,7 +15,7 @@ export class FireStation extends Model<FireStation> {
     field: '_id',
     defaultValue: DataType.UUIDV1,
   })
-  declare id: CreationOptional<string>;
+  declare id: string;
 
   @Column({ type: DataType.STRING(255), allowNull: true, field: 'name' })
   declare name?: string;
@@ -40,12 +40,12 @@ export class FireStation extends Model<FireStation> {
   @BelongsTo(() => Village)
   declare village?: Village;
 
-  // @ForeignKey(() => Register)
-  // @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
-  // declare userId?: string;
+  @ForeignKey(() => User)
+  @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
+  declare userId?: string;
 
-  // @BelongsTo(() => Register)
-  // declare user?: Register;
+  @BelongsTo(() => User)
+  declare user?: User;
 
   @Column({ type: DataType.TEXT, allowNull: true, field: 'image_location' })
   declare imageLocation?: string;

@@ -13,4 +13,7 @@ export class Country extends Model<Country> {
 
   @Column({ type: DataType.STRING(100), allowNull: false, field: 'name' })
   declare name: string;
+
+  @Column({ type: DataType.TEXT, allowNull: true, field: 'image_location' })
+  declare imageLocation?: string;
 }

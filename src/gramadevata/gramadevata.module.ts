@@ -15,6 +15,11 @@ import { TempleModule } from './temple/temple.module';
 import { TourismModule } from './tourism/tourism.module';
 import { AmbulanceFacilityModule } from './ambulance/ambulance-facility.module';
 import { BlocksModule } from './block/blocks.module';
+import { BloodBankModule } from './blood-bank/blood-bank.module';
+import { ChatModule } from './chat/chat.module';
+import { ConnectModule } from './connect/connect.module';
+import { LocationsModule } from './locations/locations.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [AuthModule, 
@@ -32,6 +37,11 @@ import { BlocksModule } from './block/blocks.module';
     TourismModule,
     AmbulanceFacilityModule,
     BlocksModule,
+    BloodBankModule,
+    ChatModule,
+    ConnectModule,
+    LocationsModule,
+    AdminModule
   ],
   controllers: [GramadevataController],
 })

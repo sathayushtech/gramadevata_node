@@ -6,6 +6,20 @@ import { Register as User } from '../auth/user.model';
 import { TempleCategory } from './temple-category.model';
 import { TempleMainCategory } from './temple-main-category.model';
 import { TemplePriority } from './temple-priority.model';
+import { TempleFacilities } from './temple-facilities.model';
+import { TourGuide } from '../events/tour-guide.model';
+import { NearbyHospital } from '../hospital/nearby-hospital.model';
+import { TempleNearbyHotel } from '../events/temple-nearby-hotel.model';
+import { TempleNearbyRestaurant } from '../events/temple-nearby-restaurant.model';
+import { SocialActivity } from './social-activity.model';
+import { TempleNearbyTourismPlace } from '../tourism/temple-nearby-tourism.model';
+import { TempleTransport } from '../events/temple-transport.model';
+import { TourOperator } from '../tourism/tour-operator.model';
+import { PoliceStation } from '../police-station/police-station.model';
+import { FireStation } from '../fire-station/fire-station.model';
+import { AmbulanceFacility } from '../ambulance/ambulance-facility.model';
+import { BloodBank } from '../blood-bank/blood-bank.model';
+import { WelfareHomes } from '../welfare/welfare-homes.model';
 import { Village } from '../villages/village.model';
 import { Block } from '../block/block.model';
 import { District } from '../../common/models/district.model';
@@ -20,6 +34,8 @@ import { VisitTempleController } from './visit-temple.controller';
 import { VisitTempleService } from './visit-temple.service';
 import { Goshala } from '../goshalas/goshala.model';
 import { Event } from '../events/event.model';
+import { CityTemplesController } from './citytemples.controller';
+import { CityTemplesService } from './citytemples.service';
 
 @Module({
   imports: [
@@ -38,9 +54,23 @@ import { Event } from '../events/event.model';
       State,
       Country,
       TempleMainCategory,
+      TempleFacilities,
+      TourGuide,
+      NearbyHospital,
+      TempleNearbyHotel,
+      TempleNearbyRestaurant,
+      SocialActivity,
+      TempleNearbyTourismPlace,
+      TempleTransport,
+      TourOperator,
+      PoliceStation,
+      FireStation,
+      AmbulanceFacility,
+      BloodBank,
+      WelfareHomes,
     ]),
   ],
-  controllers: [AddTempleDetailsController, TempleListController, VisitTempleController],
-  providers: [AddTempleDetailsService, TempleListService, VisitTempleService],
+  controllers: [AddTempleDetailsController, TempleListController, VisitTempleController, CityTemplesController],
+  providers: [AddTempleDetailsService, TempleListService, VisitTempleService, CityTemplesService],
 })
 export class TempleModule {}

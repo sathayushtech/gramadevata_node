@@ -6,6 +6,7 @@ import type { CreationAttributes } from 'sequelize';
 import nodemailer from 'nodemailer';
 import { AddEventDetails } from './add-event-details.model';
 import { Register as User } from '../auth/user.model';
+import * as GramadevataUtils from '../../common/utils/gramadevata.utils';
 
 type CreateResult = {
   status: number;
@@ -365,25 +366,14 @@ export class AddEventDetailsService {
   }
 
   private async sendNotification(eventId: string) {
-    const transport = this.getMailTransport();
-    const from = this.configService.get<string>('SMTP_FROM')
-      || this.configService.get<string>('SMTP_USER')
-      || '';
-    const to = from;
-
+    const recipient = this.configService.get<string>('EMAIL_HOST_USER');
     const subject = 'Added Event Details';
     const body = `Event ID: ${eventId}`;
 
-    if (!transport || !to) {
-      console.log(`Email: ${subject}\n${body}`);
-      return;
-    }
-
-    await transport.sendMail({
-      from,
-      to,
+    await GramadevataUtils.sendAdminEmail(this.configService, {
       subject,
       text: body,
+      recipients: recipient ? [recipient] : [],
     });
   }
 

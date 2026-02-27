@@ -2,7 +2,7 @@ import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize
 import { EntityStatus } from '../../common/enums/entity-status.enum';
 import { Register as User } from '../auth/user.model';
 import { Event } from '../events/event.model';
-import { TempleNearbyTourismPlace } from '../tourism/tourism-place.model';
+import { TempleNearbyTourismPlace } from '../tourism/temple-nearby-tourism.model';
 import { Temple } from '../temple/temple.model';
 import { Village } from '../villages/village.model';
 
