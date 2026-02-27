@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
-import { Op } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
 import type { CreationAttributes } from 'sequelize';
+import { Sequelize } from 'sequelize-typescript';
 import { AddMoreVeterinaryHospital } from './add-more-veterinary-hospital.model';
 import { NearbyVeterinaryHospital } from './nearby-veterinary-hospital.model';
 import { Register as User } from '../auth/user.model';
@@ -29,6 +30,7 @@ export class AddMoreVeterinaryHospitalService {
     private readonly nearbyVeterinaryHospitalModel: typeof NearbyVeterinaryHospital,
     @InjectModel(User)
     private readonly userModel: typeof User,
+    private readonly sequelize: Sequelize,
     private readonly configService: ConfigService
   ) {}
 
@@ -180,6 +182,91 @@ export class AddMoreVeterinaryHospitalService {
 
     await record.destroy();
     return true;
+  }
+
+  async merge(id: string, payload: Record<string, unknown>) {
+    const record = await this.addMoreVeterinaryHospitalModel.findByPk(id);
+    if (!record) {
+      return null;
+    }
+
+    const hospitalName = await this.getHospitalName(record.veterinaryHospitalId);
+    if (!hospitalName) {
+      return null;
+    }
+
+    const newDesc = typeof payload.desc === 'string' ? payload.desc.trim() : '';
+    const newImages = this.parseList(payload.image_location ?? payload.imageLocation);
+    const newMapLocations = this.cleanMapLocation(payload.map_location ?? payload.mapLocation);
+
+    const oldDesc = typeof record.desc === 'string' ? record.desc.trim() : '';
+    const oldImages = this.parseList(record.imageLocation);
+
+    const hasMapLocation = await this.tableHasColumn('add_veterinary_hospital', 'map_location');
+    const oldMapLocations = hasMapLocation
+      ? this.cleanMapLocation(await this.getRawMapLocation(record.id))
+      : [];
+
+    const matchingHospitals = await this.nearbyVeterinaryHospitalModel.findAll({
+      where: { name: hospitalName },
+      attributes: ['id'],
+    });
+
+    const matchingHospitalIds = matchingHospitals.map((h) => h.id).filter(Boolean);
+
+    const duplicates = matchingHospitalIds.length
+      ? await this.addMoreVeterinaryHospitalModel.findAll({
+        where: {
+          veterinaryHospitalId: { [Op.in]: matchingHospitalIds },
+          id: { [Op.ne]: record.id },
+        },
+      })
+      : [];
+
+    const duplicateDescs: string[] = [];
+    const duplicateImages: string[] = [];
+    const duplicateIds = duplicates.map((d) => d.id);
+
+    duplicates.forEach((dup) => {
+      if (dup.desc) {
+        duplicateDescs.push(String(dup.desc).trim());
+      }
+      duplicateImages.push(...this.parseList(dup.imageLocation));
+    });
+
+    const duplicateMapLocations = hasMapLocation && duplicateIds.length
+      ? this.cleanMapLocation(await this.getRawMapLocations(duplicateIds))
+      : [];
+
+    const mergedDesc = this.mergeUnique([oldDesc, ...duplicateDescs, newDesc]).filter(Boolean).join(', ');
+    const mergedImages = this.mergeUnique([...oldImages, ...duplicateImages, ...newImages]);
+    const mergedMapLocations = this.cleanMapLocation([...oldMapLocations, ...duplicateMapLocations, ...newMapLocations]);
+
+    record.desc = mergedDesc || undefined;
+    record.imageLocation = mergedImages;
+    record.status = 'ACTIVE';
+    await record.save();
+
+    if (hasMapLocation) {
+      await this.setRawMapLocation(record.id, mergedMapLocations);
+    }
+
+    if (duplicateIds.length) {
+      await this.addMoreVeterinaryHospitalModel.destroy({
+        where: { id: { [Op.in]: duplicateIds } },
+      });
+    }
+
+    const baseUrl = this.getFileBaseUrl();
+
+    return {
+      hospital_id: String(record.id),
+      hospital_name: hospitalName,
+      desc: mergedDesc,
+      image_location: mergedImages.map((img) => `${baseUrl}${img}`),
+      map_location: mergedMapLocations,
+      status: 'ACTIVE',
+    };
   }
 
   private async findUser(userPayload?: Record<string, unknown>) {
@@ -398,14 +485,145 @@ export class AddMoreVeterinaryHospitalService {
 
   private mapFileList(raw: unknown) {
     const list = this.parseList(raw);
-    const baseUrl = this.configService.get<string>('File_path')
-      || this.configService.get<string>('FILE_URL')
-      || '';
+    const baseUrl = this.getFileBaseUrl();
     if (!baseUrl) {
       return list;
     }
 
     return list.map((path) => `${baseUrl}${path.trim()}`);
+  }
+
+  private getFileBaseUrl() {
+    const raw = this.configService.get<string>('File_path')
+      || this.configService.get<string>('FILE_URL')
+      || '';
+    if (!raw) {
+      return '';
+    }
+    return raw.endsWith('/') ? raw : `${raw}/`;
+  }
+
+  private mergeUnique(items: string[]) {
+    const seen = new Set<string>();
+    const result: string[] = [];
+
+    items.forEach((item) => {
+      const trimmed = item.trim();
+      if (!trimmed) {
+        return;
+      }
+      if (seen.has(trimmed)) {
+        return;
+      }
+      seen.add(trimmed);
+      result.push(trimmed);
+    });
+
+    return result;
+  }
+
+  private cleanMapLocation(raw: unknown): string[] {
+    const results: string[] = [];
+    const seen = new Set<string>();
+
+    const visit = (value: unknown) => {
+      if (!value) {
+        return;
+      }
+
+      if (Array.isArray(value)) {
+        value.forEach((item) => visit(item));
+        return;
+      }
+
+      if (typeof value !== 'string') {
+        return;
+      }
+
+      let text = value.trim();
+      if (!text) {
+        return;
+      }
+
+      if (text.startsWith('[') && text.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(text);
+          visit(parsed);
+          return;
+        } catch {
+          // fallback below
+        }
+      }
+
+      text = text.replace(/\\/g, '').replace(/^['"]|['"]$/g, '');
+      const matches = text.match(/https:\/\/maps\.app\.goo\.gl\/\S+/g);
+      if (!matches) {
+        return;
+      }
+
+      matches.forEach((match) => {
+        const url = match.trim();
+        if (!url || seen.has(url)) {
+          return;
+        }
+        seen.add(url);
+        results.push(url);
+      });
+    };
+
+    visit(raw);
+    return results;
+  }
+
+  private async tableHasColumn(tableName: string, columnName: string) {
+    const rows = await this.sequelize.query(
+      `SHOW COLUMNS FROM ${tableName} LIKE :columnName`,
+      {
+        replacements: { columnName },
+        type: QueryTypes.SELECT,
+      },
+    );
+    return Array.isArray(rows) && rows.length > 0;
+  }
+
+  private async getRawMapLocation(id: string): Promise<unknown> {
+    const rows = await this.sequelize.query<{ map_location: unknown }>(
+      'SELECT map_location FROM add_veterinary_hospital WHERE _id = :id LIMIT 1',
+      {
+        replacements: { id },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    return rows?.[0]?.map_location;
+  }
+
+  private async getRawMapLocations(ids: string[]): Promise<unknown[]> {
+    if (!ids.length) {
+      return [];
+    }
+
+    const rows = await this.sequelize.query<{ map_location: unknown }>(
+      'SELECT map_location FROM add_veterinary_hospital WHERE _id IN (:ids)',
+      {
+        replacements: { ids },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    return rows.map((row) => row.map_location);
+  }
+
+  private async setRawMapLocation(id: string, locations: string[]) {
+    const value = locations.length ? JSON.stringify(locations) : null;
+
+    await this.sequelize.query(
+      'UPDATE add_veterinary_hospital SET map_location = :value WHERE _id = :id',
+      {
+        replacements: { id, value },
+        type: QueryTypes.UPDATE,
+      },
+    );
   }
 
   private parsePage(value?: string) {

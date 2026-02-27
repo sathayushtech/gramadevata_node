@@ -6,6 +6,19 @@ function camelToSnake(input: string): string {
 	return input.replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/__/g, '_').toLowerCase();
 }
 
+function snakeToCamel(input: string): string {
+	return input.replace(/_([a-z])/g, (_, c) => String(c).toUpperCase());
+}
+
+export function normalizeSnakePayload(payload: Record<string, unknown>): Record<string, unknown> {
+	const out: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(payload || {})) {
+		if (key === '_id' || key === 'id') continue;
+		out[snakeToCamel(key)] = value;
+	}
+	return out;
+}
+
 export function coerceList(value: unknown): string[] {
 	if (value === null || value === undefined) return [];
 

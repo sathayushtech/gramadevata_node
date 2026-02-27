@@ -1,4 +1,7 @@
-import { Column, DataType, Model, Table } from 'sequelize-typescript';
+import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
+import { Village } from '../villages/village.model';
+import { Temple } from '../temple/temple.model';
+import { Goshala } from '../goshalas/goshala.model';
 
 @Table({ tableName: 'nearby_vetarnary_hospital', timestamps: false })
 export class NearbyVeterinaryHospital extends Model<NearbyVeterinaryHospital> {
@@ -23,11 +26,19 @@ export class NearbyVeterinaryHospital extends Model<NearbyVeterinaryHospital> {
   @Column({ type: DataType.JSON, allowNull: true, field: 'image_location' })
   declare imageLocation?: unknown;
 
+  @ForeignKey(() => Temple)
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'temple_id' })
   declare templeId?: string;
 
+  @BelongsTo(() => Temple)
+  declare temple?: Temple;
+
+  @ForeignKey(() => Village)
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'village_id' })
   declare villageId?: string;
+
+  @BelongsTo(() => Village)
+  declare village?: Village;
 
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
   declare userId?: string;
@@ -35,8 +46,12 @@ export class NearbyVeterinaryHospital extends Model<NearbyVeterinaryHospital> {
   @Column({ type: DataType.STRING(100), allowNull: true, field: 'doctor_name' })
   declare doctorName?: string;
 
+  @ForeignKey(() => Goshala)
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'goshala_id' })
   declare goshalaId?: string;
+
+  @BelongsTo(() => Goshala)
+  declare goshala?: Goshala;
 
   @Column({ type: DataType.TEXT, allowNull: true, field: 'desc' })
   declare desc?: string;

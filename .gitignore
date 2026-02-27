@@ -1,7 +1,6 @@
 # Node
 node_modules/
 dist/
-fix-enum.js
 
 # Logs
 npm-debug.log*

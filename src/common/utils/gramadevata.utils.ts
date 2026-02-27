@@ -43,7 +43,7 @@ export function looksLikeStoredPath(value: string, entityType?: string): boolean
   }
 
   // Generic "path-like" values.
-  if (/(\.|\/).+\.(png|jpe?g|webp|gif|bmp|mp4|mov|avi|mkv)(\?.*)?$/i.test(trimmed)) {
+  if (/((\.|\/).+\.(png|jpe?g|webp|gif|bmp|mp4|mov|avi|mkv|mp3|wav|ogg|m4a)(\?.*)?$)/i.test(trimmed)) {
     return true;
   }
 
@@ -105,6 +105,21 @@ function resolveImageContentType(extension?: string) {
   return 'image/jpeg';
 }
 
+function resolveAudioExtensionAndType(base64: string): { extension: string; contentType: string } {
+  const head = base64.slice(0, 64).toLowerCase();
+  if (head.includes('data:audio/wav')) {
+    return { extension: 'wav', contentType: 'audio/wav' };
+  }
+  if (head.includes('data:audio/ogg')) {
+    return { extension: 'ogg', contentType: 'audio/ogg' };
+  }
+  if (head.includes('data:audio/mp4') || head.includes('data:audio/m4a')) {
+    return { extension: 'm4a', contentType: 'audio/mp4' };
+  }
+  // Default: mp3
+  return { extension: 'mp3', contentType: 'audio/mpeg' };
+}
+
 export async function saveImageToAzure(opts: SaveImageOpts): Promise<string> {
   const extension = (opts.extension || 'jpg').toLowerCase();
   const contentType = opts.contentType || resolveImageContentType(extension);
@@ -113,6 +128,15 @@ export async function saveImageToAzure(opts: SaveImageOpts): Promise<string> {
 
 export async function saveVideoToAzure(opts: Omit<AzureUploadOpts, 'extension'>): Promise<string> {
   return uploadToAzure({ ...opts, extension: 'mp4', contentType: opts.contentType ?? 'video/mp4' });
+}
+
+export async function saveAudioToAzure(opts: Omit<AzureUploadOpts, 'extension' | 'contentType'> & { contentType?: string }): Promise<string> {
+  const resolved = resolveAudioExtensionAndType(opts.base64);
+  return uploadToAzure({
+    ...opts,
+    extension: resolved.extension,
+    contentType: opts.contentType ?? resolved.contentType,
+  });
 }
 
 export async function saveEntityImagesToAzure(opts: {
@@ -182,6 +206,43 @@ export async function saveEntityVideosToAzure(opts: {
         id,
         name,
         entityType,
+      }),
+    );
+  }
+
+  return saved;
+}
+
+export async function saveEntityAudiosToAzure(opts: {
+  configService: ConfigService;
+  audios: string[];
+  id: string;
+  name: string;
+  entityType: string;
+  contentType?: string;
+}): Promise<string[]> {
+  const { configService, audios, id, name, entityType, contentType } = opts;
+
+  const saved: string[] = [];
+  for (const audio of audios) {
+    const raw = audio?.trim();
+    if (!raw || raw.toLowerCase() === 'null') {
+      continue;
+    }
+
+    if (looksLikeStoredPath(raw, entityType)) {
+      saved.push(raw);
+      continue;
+    }
+
+    saved.push(
+      await saveAudioToAzure({
+        configService,
+        base64: raw,
+        id,
+        name,
+        entityType,
+        contentType,
       }),
     );
   }

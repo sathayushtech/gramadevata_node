@@ -9,6 +9,9 @@ import { Register as User } from '../auth/user.model';
 import { AddMoreVeterinaryHospitalController } from './add-more-veterinary-hospital.controller';
 import { AddMoreVeterinaryHospitalService } from './add-more-veterinary-hospital.service';
 import { AddMoreVeterinaryHospital } from './add-more-veterinary-hospital.model';
+import { NearbyVeterinaryHospitalController } from './nearby-veterinary-hospital.controller';
+import { NearbyVeterinaryHospitalService } from './nearby-veterinary-hospital.service';
+import { VeterinaryHospitalMergeController } from './veterinary-hospital-merge.controller';
 
 @Module({
   imports: [
@@ -20,7 +23,16 @@ import { AddMoreVeterinaryHospital } from './add-more-veterinary-hospital.model'
       User
     ]),
   ],
-  controllers: [AddMoreHospitalController, AddMoreVeterinaryHospitalController],
-  providers: [AddMoreHospitalService, AddMoreVeterinaryHospitalService],
+  controllers: [
+    AddMoreHospitalController,
+    AddMoreVeterinaryHospitalController,
+    NearbyVeterinaryHospitalController,
+    VeterinaryHospitalMergeController,
+  ],
+  providers: [
+    AddMoreHospitalService,
+    AddMoreVeterinaryHospitalService,
+    NearbyVeterinaryHospitalService,
+  ],
 })
 export class HospitalsModule {}
