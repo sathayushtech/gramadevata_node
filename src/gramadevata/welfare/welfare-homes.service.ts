@@ -4,7 +4,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import { WelfareHomes } from './welfare-homes.model';
 import { Village } from '../villages/village.model';
-import { Block } from '../../common/models/block.model';
+import { Block } from '../block/block.model';
 import { District } from '../../common/models/district.model';
 import { State } from '../../common/models/state.model';
 import { Country } from '../../common/models/country.model';

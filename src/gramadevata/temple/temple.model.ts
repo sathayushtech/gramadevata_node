@@ -1,64 +1,90 @@
-import { CreationOptional } from 'sequelize';
 import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
-import { Village } from '../villages/village.model';
-// import { TempleCategory } from './temple-category.model';
-// import { TemplePriority } from './temple-priority.model';
-// import { Register } from '../auth/register.model';
+import { ActivityOption } from '../../common/enums/activity-option.enum';
+import { EntityStatus } from '../../common/enums/entity-status.enum';
+import { Era } from '../../common/enums/era.enum';
+import { GeoSite } from '../../common/enums/geosite.enum';
+import { TempleStyle } from '../../common/enums/temple-style.enum';
 import { Country } from '../../common/models/country.model';
-import { ActivityOption, EntityStatus, Era, GeoSite, TempleStyle } from '../../common/enums';
+import { Register as User } from '../auth/user.model';
+import { Village } from '../villages/village.model';
+import { TempleCategory } from './temple-category.model';
+import { TemplePriority } from './temple-priority.model';
 
 @Table({ tableName: 'temple', timestamps: false })
 export class Temple extends Model<Temple> {
   @Column({
-    type: DataType.UUID,
+    type: DataType.STRING(45),
     allowNull: false,
     primaryKey: true,
-    unique: true,
     field: '_id',
     defaultValue: DataType.UUIDV1,
+    unique: true,
   })
-  declare id: CreationOptional<string>;
+  declare id: string;
 
-  // Needed for Django parity in VillageSerializer temple partitioning.
-  // DB already has these columns; `synchronize` is disabled.
+  @ForeignKey(() => TempleCategory)
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'category' })
-  declare category?: string;
+  declare categoryId?: string;
 
+  @BelongsTo(() => TempleCategory, { foreignKey: 'categoryId', onDelete: 'SET NULL' })
+  declare category?: TempleCategory;
+
+  @ForeignKey(() => TemplePriority)
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'priority' })
-  declare priority?: string;
+  declare priorityId?: string;
+
+  @BelongsTo(() => TemplePriority, { foreignKey: 'priorityId', onDelete: 'SET NULL' })
+  declare priority?: TemplePriority;
 
   @Column({ type: DataType.STRING(100), allowNull: true, field: 'name' })
   declare name?: string;
 
-  @Column({ type: DataType.BOOLEAN, allowNull: true, defaultValue: false, field: 'is_navagraha_established' })
+  @Column({ type: DataType.BOOLEAN, allowNull: true, field: 'is_navagraha_established', defaultValue: false })
   declare isNavagrahaEstablished?: boolean;
 
   @Column({ type: DataType.STRING(100), allowNull: true, field: 'construction_year' })
   declare constructionYear?: string;
 
-  @Column({ type: DataType.STRING(50), allowNull: true, defaultValue: null, field: 'era', validate: { isIn: [Object.values(Era)] } })
+  @Column({
+    type: DataType.STRING(50),
+    allowNull: true,
+    field: 'era',
+    validate: { isIn: [Object.values(Era)] },
+  })
   declare era?: string;
 
-  @Column({ type: DataType.BOOLEAN, allowNull: true, defaultValue: false, field: 'is_destroyed' })
-  declare isDestroyed?: boolean;
+  @Column({ type: DataType.BOOLEAN, allowNull: false, field: 'is_destroyed', defaultValue: false })
+  declare isDestroyed: boolean;
 
-  @Column({ type: DataType.BOOLEAN, allowNull: true, defaultValue: false, field: 'animal_sacrifice_status' })
-  declare animalSacrificeStatus?: boolean;
+  @Column({ type: DataType.BOOLEAN, allowNull: false, field: 'animal_sacrifice_status', defaultValue: false })
+  declare animalSacrificeStatus: boolean;
 
   @Column({ type: DataType.STRING(100), allowNull: true, field: 'diety' })
   declare diety?: string;
 
-  @Column({ type: DataType.STRING(50), allowNull: true, defaultValue: TempleStyle.OTHER, field: 'style', validate: { isIn: [Object.values(TempleStyle)] } })
+  @Column({
+    type: DataType.STRING(50),
+    allowNull: true,
+    field: 'style',
+    defaultValue: TempleStyle.OTHER,
+    validate: { isIn: [Object.values(TempleStyle)] },
+  })
   declare style?: string;
 
-  @Column({ type: DataType.STRING(50), allowNull: true, defaultValue: GeoSite.VILLAGE, field: 'geo_site', validate: { isIn: [Object.values(GeoSite)] } })
+  @Column({
+    type: DataType.STRING(50),
+    allowNull: true,
+    field: 'geo_site',
+    defaultValue: GeoSite.VILLAGE,
+    validate: { isIn: [Object.values(GeoSite)] },
+  })
   declare geoSite?: string;
 
   @ForeignKey(() => Village)
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'object_id' })
   declare objectId?: string;
 
-  @BelongsTo(() => Village)
+  @BelongsTo(() => Village, { foreignKey: 'objectId', onDelete: 'SET NULL' })
   declare village?: Village;
 
   @Column({ type: DataType.STRING(450), allowNull: true, field: 'temple_map_location' })
@@ -79,11 +105,17 @@ export class Temple extends Model<Temple> {
   @Column({ type: DataType.TEXT, allowNull: true, field: 'desc' })
   declare desc?: string;
 
-  @Column({ type: DataType.DATE, allowNull: true, field: 'created_at' })
-  declare createdAt?: CreationOptional<Date>;
+  @Column({ type: DataType.DATE, allowNull: false, field: 'created_at', defaultValue: DataType.NOW })
+  declare createdAt: Date;
 
-  @Column({ type: DataType.STRING(50), allowNull: true, defaultValue: EntityStatus.INACTIVE, field: 'status', validate: { isIn: [Object.values(EntityStatus)] } })
-  declare status?: string;
+  @Column({
+    type: DataType.STRING(50),
+    allowNull: false,
+    field: 'status',
+    defaultValue: EntityStatus.INACTIVE,
+    validate: { isIn: [Object.values(EntityStatus)] },
+  })
+  declare status: string;
 
   @Column({ type: DataType.JSON, allowNull: true, field: 'image_location' })
   declare imageLocation?: unknown;
@@ -91,14 +123,14 @@ export class Temple extends Model<Temple> {
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'old_temple_code' })
   declare oldTempleCode?: string;
 
-  // @ForeignKey(() => Register)
-  // @Column({ type: DataType.STRING(45), allowNull: true, field: 'user' })
-  // declare userId?: string;
+  @ForeignKey(() => User)
+  @Column({ type: DataType.STRING(45), allowNull: true, field: 'user' })
+  declare userId?: string;
 
-  // @BelongsTo(() => Register)
-  // declare user?: Register;
+  @BelongsTo(() => User, { foreignKey: 'userId', onDelete: 'SET NULL' })
+  declare user?: User;
 
-  @Column({ type: DataType.BOOLEAN, allowNull: true, defaultValue: false, field: 'can_connect' })
+  @Column({ type: DataType.BOOLEAN, allowNull: true, field: 'can_connect', defaultValue: false })
   declare canConnect?: boolean;
 
   @Column({ type: DataType.STRING(100), allowNull: true, field: 'temple_area' })
@@ -140,13 +172,19 @@ export class Temple extends Model<Temple> {
   @Column({ type: DataType.STRING(100), allowNull: true, field: 'latitude' })
   declare latitude?: string;
 
-  @Column({ type: DataType.STRING(20), allowNull: true, defaultValue: ActivityOption.NO, field: 'dress_code', validate: { isIn: [Object.values(ActivityOption)] } })
-  declare dressCode?: string;
+  @Column({
+    type: DataType.STRING(20),
+    allowNull: false,
+    field: 'dress_code',
+    defaultValue: ActivityOption.NO,
+    validate: { isIn: [Object.values(ActivityOption)] },
+  })
+  declare dressCode: string;
 
   @Column({ type: DataType.TEXT, allowNull: true, field: 'festivals' })
   declare festivals?: string;
 
-  @Column({ type: DataType.JSON, allowNull: true, defaultValue: [], field: 'temple_video' })
+  @Column({ type: DataType.JSON, allowNull: true, field: 'temple_video', defaultValue: [] })
   declare templeVideo?: unknown;
 
   @Column({ type: DataType.STRING(100), allowNull: true, field: 'country_name' })
@@ -171,6 +209,6 @@ export class Temple extends Model<Temple> {
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'country' })
   declare countryId?: string;
 
-  @BelongsTo(() => Country)
-  declare countryRef?: Country;
+  @BelongsTo(() => Country, { foreignKey: 'countryId', onDelete: 'CASCADE' })
+  declare country?: Country;
 }

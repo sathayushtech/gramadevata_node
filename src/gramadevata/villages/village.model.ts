@@ -1,6 +1,6 @@
 import { CreationOptional } from 'sequelize';
 import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
-import { Block } from '../../common/models/block.model';
+import { Block } from '../block/block.model';
 import { EntityStatus } from '../../common/enums';
 
 @Table({ tableName: 'village', timestamps: false })

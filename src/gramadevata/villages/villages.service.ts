@@ -12,7 +12,7 @@ import { VillageFamousPersonality } from './village-famous-personality.model';
 import { VillageDevelopmentFacility } from './village-development-facility.model';
 import { Connect } from '../connect/connect.model';
 import { Temple } from '../temple/temple.model';
-import { Block } from '../../common/models/block.model';
+import { Block } from '../block/block.model';
 import { District } from '../../common/models/district.model';
 import { State } from '../../common/models/state.model';
 import { Country } from '../../common/models/country.model';
@@ -272,14 +272,14 @@ export class VillagesService {
     const FAMOUS_PRIORITY = '630f3239-f515-47fb-be8d-db727b9f2174';
     const GRAMDEVATA_CATEGORY = '742ccfe6-d0b5-11ee-84bd-0242ac110002';
 
-    const iconic = temples.filter((t) => t.priority === ICONIC_PRIORITY);
-    const famous = temples.filter((t) => t.priority === FAMOUS_PRIORITY);
+    const iconic = temples.filter((t) => t.priorityId === ICONIC_PRIORITY);
+    const famous = temples.filter((t) => t.priorityId === FAMOUS_PRIORITY);
     const gramdevata = temples.filter(
-      (t) => t.category === GRAMDEVATA_CATEGORY && ![ICONIC_PRIORITY, FAMOUS_PRIORITY].includes(String(t.priority || '')),
+      (t) => t.categoryId === GRAMDEVATA_CATEGORY && ![ICONIC_PRIORITY, FAMOUS_PRIORITY].includes(String(t.priority || '')),
     );
     const others = temples.filter(
       (t) =>
-        t.category !== GRAMDEVATA_CATEGORY &&
+        t.categoryId !== GRAMDEVATA_CATEGORY &&
         ![ICONIC_PRIORITY, FAMOUS_PRIORITY].includes(String(t.priority || '')),
     );
 

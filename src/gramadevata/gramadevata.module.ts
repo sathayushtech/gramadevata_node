@@ -14,6 +14,7 @@ import { RestaurantModule } from './restaurant/pooja-store.module';
 import { TempleModule } from './temple/temple.module';
 import { TourismModule } from './tourism/tourism.module';
 import { AmbulanceFacilityModule } from './ambulance/ambulance-facility.module';
+import { BlocksModule } from './block/blocks.module';
 
 @Module({
   imports: [AuthModule, 
@@ -29,7 +30,8 @@ import { AmbulanceFacilityModule } from './ambulance/ambulance-facility.module';
     RestaurantModule,
     TempleModule,
     TourismModule,
-    AmbulanceFacilityModule
+    AmbulanceFacilityModule,
+    BlocksModule,
   ],
   controllers: [GramadevataController],
 })

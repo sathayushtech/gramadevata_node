@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { SequelizeModule } from '@nestjs/sequelize';
-import { Block } from '../../common/models/block.model';
+import { Block } from '../block/block.model';
 import { Country } from '../../common/models/country.model';
 import { District } from '../../common/models/district.model';
 import { State } from '../../common/models/state.model';
