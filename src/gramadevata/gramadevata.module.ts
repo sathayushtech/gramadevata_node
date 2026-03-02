@@ -20,6 +20,7 @@ import { ChatModule } from './chat/chat.module';
 import { ConnectModule } from './connect/connect.module';
 import { LocationsModule } from './locations/locations.module';
 import { AdminModule } from './admin/admin.module';
+import { FireStationsModule } from './fire-station/fire-stations.module';
 
 @Module({
   imports: [AuthModule, 
@@ -41,7 +42,8 @@ import { AdminModule } from './admin/admin.module';
     ChatModule,
     ConnectModule,
     LocationsModule,
-    AdminModule
+    AdminModule,
+    FireStationsModule,
   ],
   controllers: [GramadevataController],
 })

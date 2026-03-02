@@ -36,6 +36,9 @@ import { Goshala } from '../goshalas/goshala.model';
 import { Event } from '../events/event.model';
 import { CityTemplesController } from './citytemples.controller';
 import { CityTemplesService } from './citytemples.service';
+import { FavoriteTemplesController } from './favorite-temples.controller';
+import { FavoriteTemplesService } from './favorite-temples.service';
+import { FavoriteTemple } from './favorite-temple.model';
 
 @Module({
   imports: [
@@ -68,9 +71,10 @@ import { CityTemplesService } from './citytemples.service';
       AmbulanceFacility,
       BloodBank,
       WelfareHomes,
+      FavoriteTemple,
     ]),
   ],
-  controllers: [AddTempleDetailsController, TempleListController, VisitTempleController, CityTemplesController],
-  providers: [AddTempleDetailsService, TempleListService, VisitTempleService, CityTemplesService],
+  controllers: [AddTempleDetailsController, TempleListController, VisitTempleController, CityTemplesController, FavoriteTemplesController],
+  providers: [AddTempleDetailsService, TempleListService, VisitTempleService, CityTemplesService, FavoriteTemplesService],
 })
 export class TempleModule {}

@@ -1,9 +1,8 @@
-import { CreationOptional } from 'sequelize';
 import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
-import { Temple } from '../temple/temple.model';
+import { Register as User } from '../auth/user.model';
 import { Event } from '../events/event.model';
 import { Goshala } from '../goshalas/goshala.model';
-// import { Register } from '../auth/user.model';
+import { Temple } from './temple.model';
 
 @Table({ tableName: 'add_favorite_temples', timestamps: false })
 export class FavoriteTemple extends Model<FavoriteTemple> {
@@ -15,14 +14,14 @@ export class FavoriteTemple extends Model<FavoriteTemple> {
     field: '_id',
     defaultValue: DataType.UUIDV1,
   })
-  declare id: CreationOptional<string>;
+  declare id: string;
 
-  // @ForeignKey(() => Register)
-  // @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
-  // declare userId?: string;
+  @ForeignKey(() => User)
+  @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
+  declare userId?: string;
 
-  // @BelongsTo(() => Register)
-  // declare user?: Register;
+  @BelongsTo(() => User)
+  declare user?: User;
 
   @ForeignKey(() => Temple)
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'temple_id' })
@@ -32,7 +31,7 @@ export class FavoriteTemple extends Model<FavoriteTemple> {
   declare temple?: Temple;
 
   @Column({ type: DataType.DATE, allowNull: true, field: 'created_at' })
-  declare createdAt?: CreationOptional<Date>;
+  declare createdAt?: Date;
 
   @ForeignKey(() => Goshala)
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'goshala_id' })
