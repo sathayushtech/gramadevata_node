@@ -21,6 +21,7 @@ import { ConnectModule } from './connect/connect.module';
 import { LocationsModule } from './locations/locations.module';
 import { AdminModule } from './admin/admin.module';
 import { FireStationsModule } from './fire-station/fire-stations.module';
+import { GlobalSearchModule } from './global-search/global-search.module';
 
 @Module({
   imports: [AuthModule, 
@@ -44,6 +45,7 @@ import { FireStationsModule } from './fire-station/fire-stations.module';
     LocationsModule,
     AdminModule,
     FireStationsModule,
+    GlobalSearchModule,
   ],
   controllers: [GramadevataController],
 })
