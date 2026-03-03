@@ -41,6 +41,28 @@ import { FavoriteTemplesService } from './favorite-temples.service';
 import { FavoriteTemple } from './favorite-temple.model';
 import { GlobalTemplesController } from './global-temples.controller';
 import { GlobalTemplesService } from './global-temples.service';
+import { TempleFestival } from './temple-festival.model';
+import { Comment } from '../comments/comment.model';
+import { Connect } from '../connect/connect.model';
+import { TempleCategoryController } from './temple-category.controller';
+import { TempleCategoryService } from './temple-category.service';
+import { TempleMainCategoryController } from './temple-main-category.controller';
+import { TempleMainCategoryService } from './temple-main-category.service';
+import { TemplePriorityController } from './temple-priority.controller';
+import { TemplePriorityService } from './temple-priority.service';
+import { TempleFacilitiesController } from './temple-facilities.controller';
+import { TempleFacilitiesService } from './temple-facilities.service';
+import { TempleFestivalController } from './temple-festival.controller';
+import { TempleFestivalService } from './temple-festival.service';
+import { TempleNearbyHotelsController } from './temple-nearby-hotels.controller';
+import { TempleNearbyHotelsService } from './temple-nearby-hotels.service';
+import { TempleController } from './temple.controller';
+import { TempleService } from './temple.service';
+import { TempleTransportController } from './temple-transport.controller';
+import { TempleTransportService } from './temple-transport.service';
+import { TemplePoojaTimingController } from './temple-pooja-timing.controller';
+import { TemplePoojaTimingService } from './temple-pooja-timing.service';
+import { TemplePoojaTiming } from './pooja-timing.model';
 
 @Module({
   imports: [
@@ -60,6 +82,7 @@ import { GlobalTemplesService } from './global-temples.service';
       Country,
       TempleMainCategory,
       TempleFacilities,
+      TempleFestival,
       TourGuide,
       NearbyHospital,
       TempleNearbyHotel,
@@ -74,13 +97,44 @@ import { GlobalTemplesService } from './global-temples.service';
       BloodBank,
       WelfareHomes,
       FavoriteTemple,
+      Comment,
+      Connect,
+      TemplePoojaTiming,
     ]),
   ],
-  controllers: [AddTempleDetailsController, TempleListController, VisitTempleController, CityTemplesController, FavoriteTemplesController,
-    GlobalTemplesController
+  controllers: [
+    AddTempleDetailsController,
+    TempleListController,
+    VisitTempleController,
+    CityTemplesController,
+    FavoriteTemplesController,
+    GlobalTemplesController,
+    TempleCategoryController,
+    TempleMainCategoryController,
+    TemplePriorityController,
+    TempleFacilitiesController,
+    TempleFestivalController,
+    TempleNearbyHotelsController,
+    TempleController,
+    TempleTransportController,
+    TemplePoojaTimingController,
   ],
-  providers: [AddTempleDetailsService, TempleListService, VisitTempleService, CityTemplesService, FavoriteTemplesService,
-    GlobalTemplesService
+  providers: [
+    AddTempleDetailsService,
+    TempleListService,
+    VisitTempleService,
+    CityTemplesService,
+    FavoriteTemplesService,
+    GlobalTemplesService,
+    TempleCategoryService,
+    TempleMainCategoryService,
+    TemplePriorityService,
+    TempleFacilitiesService,
+    TempleFestivalService,
+    TempleNearbyHotelsService,
+    TempleService,
+    TempleTransportService,
+    TemplePoojaTimingService,
   ],
 })
 export class TempleModule {}

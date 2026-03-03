@@ -23,12 +23,8 @@ export class TempleFacilities extends Model<TempleFacilities> {
   @BelongsTo(() => Temple)
   declare temple?: Temple;
 
-  // @ForeignKey(() => Register)
-  // @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
-  // declare userId?: string;
-
-  // @BelongsTo(() => Register)
-  // declare user?: Register;
+  @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
+  declare userId?: string;
 
   @Column({ type: DataType.STRING(20), allowNull: true, defaultValue: ActivityOption.NO, field: 'pooja_shops', validate: { isIn: [Object.values(ActivityOption)] } })
   declare poojaShops?: string;
