@@ -48,4 +48,18 @@ export class EventStatusController {
     }
     return result.body as unknown;
   }
+
+  @Get('globalevents')
+  @ApiTags('GlobalEvents')
+  async getGlobalEvents(
+    @Query() query: Record<string, string | undefined>,
+    @Req() req: { protocol?: string; get?: (name: string) => string | undefined; path?: string; originalUrl?: string }
+  ) {
+    const basePath = req.originalUrl ? req.originalUrl.split('?')[0] : req.path ?? '';
+    const host = req.get?.('host');
+    const protocol = req.protocol ?? 'http';
+    const baseUrl = host ? `${protocol}://${host}${basePath}` : basePath;
+
+    return this.eventService.listGlobalEvents(query, baseUrl);
+  }
 }

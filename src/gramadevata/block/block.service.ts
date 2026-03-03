@@ -23,7 +23,6 @@ export class BlockService {
 
 	/**
 	 * List blocks with dynamic filtering by query parameters.
-	 * Mimics Django's BlockView list behavior.
 	 */
 	async list(query: Record<string, string | undefined>): Promise<Record<string, unknown>[]> {
 		const where: WhereOptions<Block> = this.buildWhereClause(query);

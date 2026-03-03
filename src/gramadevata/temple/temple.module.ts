@@ -39,6 +39,8 @@ import { CityTemplesService } from './citytemples.service';
 import { FavoriteTemplesController } from './favorite-temples.controller';
 import { FavoriteTemplesService } from './favorite-temples.service';
 import { FavoriteTemple } from './favorite-temple.model';
+import { GlobalTemplesController } from './global-temples.controller';
+import { GlobalTemplesService } from './global-temples.service';
 
 @Module({
   imports: [
@@ -74,7 +76,11 @@ import { FavoriteTemple } from './favorite-temple.model';
       FavoriteTemple,
     ]),
   ],
-  controllers: [AddTempleDetailsController, TempleListController, VisitTempleController, CityTemplesController, FavoriteTemplesController],
-  providers: [AddTempleDetailsService, TempleListService, VisitTempleService, CityTemplesService, FavoriteTemplesService],
+  controllers: [AddTempleDetailsController, TempleListController, VisitTempleController, CityTemplesController, FavoriteTemplesController,
+    GlobalTemplesController
+  ],
+  providers: [AddTempleDetailsService, TempleListService, VisitTempleService, CityTemplesService, FavoriteTemplesService,
+    GlobalTemplesService
+  ],
 })
 export class TempleModule {}

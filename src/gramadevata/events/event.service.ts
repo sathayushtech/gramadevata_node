@@ -575,6 +575,36 @@ export class EventService {
     };
   }
 
+  async listGlobalEvents(
+    query: Record<string, string | undefined>,
+    baseUrl?: string
+  ): Promise<Record<string, unknown>> {
+    const page = this.normalizePage(query.page ?? query.page_no);
+    const pageSize = this.normalizePageSize(query.page_size ?? query.pageSize);
+    const offset = (page - 1) * pageSize;
+
+    const { count, rows } = await this.eventModel.findAndCountAll({
+      where: {
+        geoSite: { [Op.notIn]: ['S', 'D', 'B', 'V'] },
+      },
+      include: this.getLocationInclude(),
+      order: [['createdAt', 'DESC']],
+      limit: pageSize,
+      offset,
+    });
+
+    const results = await this.enrichEvents(rows);
+
+    return this.buildPaginatedResponse({
+      count,
+      page,
+      pageSize,
+      results,
+      baseUrl,
+      query,
+    });
+  }
+
   private async enrichEvents(events: Event[]) {
     const enriched = [];
     for (const event of events) {

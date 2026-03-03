@@ -6,6 +6,18 @@ import { AddGoshalaDetails } from './add-ghoshala.model';
 import { AddGoshalaDetailsController } from './add-goshala-details.controller';
 import { AddGoshalaDetailsService } from './add-goshala-details.service';
 import { Register as User } from '../auth/user.model';
+import { Comment } from '../comments/comment.model';
+import { Village } from '../villages/village.model';
+import { Block } from '../block/block.model';
+import { District } from '../../common/models/district.model';
+import { State } from '../../common/models/state.model';
+import { Country } from '../../common/models/country.model';
+import { Temple } from '../temple/temple.model';
+import { Event } from '../events/event.model';
+import { GlobalGoshalasController } from './global-goshalas.controller';
+import { GlobalGoshalasService } from './global-goshalas.service';
+import { GoshalaController } from './goshala.controller';
+import { GoshalaService } from './goshala.service';
 
 @Module({
   imports: [
@@ -14,9 +26,17 @@ import { Register as User } from '../auth/user.model';
       NearbyVeterinaryHospital,
       AddGoshalaDetails,
       User,
+      Comment,
+      Village,
+      Block,
+      District,
+      State,
+      Country,
+      Temple,
+      Event,
     ]),
   ],
-  controllers: [AddGoshalaDetailsController],
-  providers: [AddGoshalaDetailsService],
+  controllers: [AddGoshalaDetailsController, GlobalGoshalasController, GoshalaController],
+  providers: [AddGoshalaDetailsService, GlobalGoshalasService, GoshalaService],
 })
 export class GoshalasModule {}
