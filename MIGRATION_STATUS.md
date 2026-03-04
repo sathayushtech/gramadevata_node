@@ -205,15 +205,6 @@
 | PUT | /nearby_hospital_merge/{hospital_id} | ❌ Pending |
 | GET | /hospitals_by_location | ❌ Pending |
 
-### 13. Blood Bank - Add More Details (6 endpoints)
-| Method | Django Endpoint | Node Status |
-|--------|----------------|-------------|
-| GET | /add_more_blood_bank | ❌ Pending |
-| POST | /add_more_blood_bank | ❌ Pending |
-| GET | /add_more_blood_bank/{_id} | ❌ Pending |
-| PUT | /add_more_blood_bank/{_id} | ❌ Pending |
-| PATCH | /add_more_blood_bank/{_id} | ❌ Pending |
-| DELETE | /add_more_blood_bank/{_id} | ❌ Pending |
 
 ### 14. Village - Additional Endpoints (2 endpoints)
 | Method | Django Endpoint | Node Status |
@@ -221,35 +212,6 @@
 | GET | /villages_by_location | ❌ Pending |
 | PUT | /mergevillage/{village_id}/ | ❌ Pending |
 
-### 15. Pujari Category (6 endpoints)
-| Method | Django Endpoint | Node Status |
-|--------|----------------|-------------|
-| GET | /pujari_category | ❌ Pending |
-| POST | /pujari_category | ❌ Pending |
-| GET | /pujari_category/{_id} | ❌ Pending |
-| PUT | /pujari_category/{_id} | ❌ Pending |
-| PATCH | /pujari_category/{_id} | ❌ Pending |
-| DELETE | /pujari_category/{_id} | ❌ Pending |
-
-### 16. Pujari Subcategories (6 endpoints)
-| Method | Django Endpoint | Node Status |
-|--------|----------------|-------------|
-| GET | /pujari-subcategories | ❌ Pending |
-| POST | /pujari-subcategories | ❌ Pending |
-| GET | /pujari-subcategories/{_id} | ❌ Pending |
-| PUT | /pujari-subcategories/{_id} | ❌ Pending |
-| PATCH | /pujari-subcategories/{_id} | ❌ Pending |
-| DELETE | /pujari-subcategories/{_id} | ❌ Pending |
-
-### 17. Media (6 endpoints)
-| Method | Django Endpoint | Node Status |
-|--------|----------------|-------------|
-| GET | /media | ❌ Pending |
-| POST | /media | ❌ Pending |
-| GET | /media/{_id} | ❌ Pending |
-| PUT | /media/{_id} | ❌ Pending |
-| PATCH | /media/{_id} | ❌ Pending |
-| DELETE | /media/{_id} | ❌ Pending |
 
 
 ### 21. Share (2 endpoints)
@@ -335,34 +297,3 @@ By Area:
   Home:          ░░░░░░░░░░░░░░░░░░░░  0%  (entirely missing)
 ```
 
----
-
-## Priority Recommendation
-
-**High Priority (Core features used by main app):**
-1. Tourism (9 endpoints) - entirely missing
-2. Restaurants (8 endpoints) - main CRUD missing
-3. Pooja Stores (8 endpoints) - main CRUD missing
-4. Police Station (6 endpoints) - entirely missing
-5. Nearby Hospitals (8 endpoints) - main CRUD missing
-6. State CRUD (6 endpoints) - entirely missing
-
-**Medium Priority:**
-7. Goshala extras (17 endpoints) - categories, merge, location
-8. Temple extras (15 endpoints) - merge, inactive, location by hierarchy
-9. Tour Operators (8 endpoints) - main CRUD missing
-10. Tour Guides (7 endpoints) - entirely missing
-11. Profile Management (6 endpoints)
-12. Pujari Category + Subcategories (12 endpoints)
-
-**Lower Priority:**
-13. Media CRUD (6 endpoints)
-14. Social Activities (6 endpoints)
-15. Prayers & Benefits (6 endpoints)
-16. Share (2 endpoints)
-17. Home (1 endpoint)
-18. SSO Login + Token Refresh (2 endpoints)
-19. Event extras (3 endpoints)
-20. Village extras (2 endpoints)
-21. Blood Bank add_more (6 endpoints)
-22. Country get by ID (1 endpoint)

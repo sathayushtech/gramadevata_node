@@ -23,6 +23,8 @@ import { AdminModule } from './admin/admin.module';
 import { FireStationsModule } from './fire-station/fire-stations.module';
 import { GlobalSearchModule } from './global-search/global-search.module';
 import { PoliceStationModule } from './police-station/police-station.module';
+import { PujariModule } from './pujari/pujari.module';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [AuthModule, 
@@ -48,6 +50,8 @@ import { PoliceStationModule } from './police-station/police-station.module';
     FireStationsModule,
     GlobalSearchModule,
     PoliceStationModule,
+    PujariModule,
+    MediaModule,
   ],
   controllers: [GramadevataController],
 })

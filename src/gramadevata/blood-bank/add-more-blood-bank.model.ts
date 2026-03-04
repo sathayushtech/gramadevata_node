@@ -1,6 +1,6 @@
 import { CreationOptional } from 'sequelize';
 import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
-// import { Register } from '../auth/register.model';
+import { Register } from '../auth/user.model';
 import { BloodBank } from './blood-bank.model';
 import { EntityStatus } from '../../common/enums';
 
@@ -23,12 +23,12 @@ export class AddMoreBloodBank extends Model<AddMoreBloodBank> {
   @BelongsTo(() => BloodBank)
   declare bloodBank?: BloodBank;
 
-  // @ForeignKey(() => Register)
-  // @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
-  // declare userId?: string;
+  @ForeignKey(() => Register)
+  @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
+  declare userId?: string;
 
-  // @BelongsTo(() => Register)
-  // declare user?: Register;
+  @BelongsTo(() => Register, { foreignKey: 'userId', onDelete: 'CASCADE' })
+  declare user?: Register;
 
   @Column({ type: DataType.TEXT, allowNull: true, field: 'desc' })
   declare desc?: string;
