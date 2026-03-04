@@ -251,35 +251,6 @@
 | PATCH | /media/{_id} | ❌ Pending |
 | DELETE | /media/{_id} | ❌ Pending |
 
-### 18. Police Station (6 endpoints)
-| Method | Django Endpoint | Node Status |
-|--------|----------------|-------------|
-| GET | /police_station | ❌ Pending |
-| POST | /police_station | ❌ Pending |
-| GET | /police_station/{_id} | ❌ Pending |
-| PUT | /police_station/{_id} | ❌ Pending |
-| PATCH | /police_station/{_id} | ❌ Pending |
-| DELETE | /police_station/{_id} | ❌ Pending |
-
-### 19. Social Activities (6 endpoints)
-| Method | Django Endpoint | Node Status |
-|--------|----------------|-------------|
-| GET | /social_activities | ❌ Pending |
-| POST | /social_activities | ❌ Pending |
-| GET | /social_activities/{_id} | ❌ Pending |
-| PUT | /social_activities/{_id} | ❌ Pending |
-| PATCH | /social_activities/{_id} | ❌ Pending |
-| DELETE | /social_activities/{_id} | ❌ Pending |
-
-### 20. Prayers and Benefits (6 endpoints)
-| Method | Django Endpoint | Node Status |
-|--------|----------------|-------------|
-| GET | /prayers_and_benefits | ❌ Pending |
-| POST | /prayers_and_benefits | ❌ Pending |
-| GET | /prayers_and_benefits/{_id} | ❌ Pending |
-| PUT | /prayers_and_benefits/{_id} | ❌ Pending |
-| PATCH | /prayers_and_benefits/{_id} | ❌ Pending |
-| DELETE | /prayers_and_benefits/{_id} | ❌ Pending |
 
 ### 21. Share (2 endpoints)
 | Method | Django Endpoint | Node Status |
