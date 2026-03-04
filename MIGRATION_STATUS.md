@@ -1,3 +1,4 @@
+
 # Gramadevata: Django → Node.js Migration Status
 
 **Date:** 4 March 2026
@@ -167,41 +168,6 @@
 | GET | /locationByEvents/ | ❌ Pending |
 | GET | /indiaevents | ❌ Pending |
 
-### 7. Tourism (9 endpoints)
-| Method | Django Endpoint | Node Status |
-|--------|----------------|-------------|
-| GET | /tourism | ❌ Pending |
-| POST | /tourism | ❌ Pending |
-| GET | /tourism/{_id} | ❌ Pending |
-| PUT | /tourism/{_id} | ❌ Pending |
-| PATCH | /tourism/{_id} | ❌ Pending |
-| DELETE | /tourism/{_id} | ❌ Pending |
-| GET | /tourism_bylocation | ❌ Pending |
-| GET | /tourism_inactive | ❌ Pending |
-| GET | /inactive_tourism_bylocation | ❌ Pending |
-
-### 8. Tour Operators (8 endpoints)
-| Method | Django Endpoint | Node Status |
-|--------|----------------|-------------|
-| GET | /tour-operators | ❌ Pending |
-| POST | /tour-operators | ❌ Pending |
-| GET | /tour-operators/{_id} | ❌ Pending |
-| PUT | /tour-operators/{_id} | ❌ Pending |
-| PATCH | /tour-operators/{_id} | ❌ Pending |
-| DELETE | /tour-operators/{_id} | ❌ Pending |
-| GET | /tour-operators_by_location | ❌ Pending |
-| PUT | /tour_operator_merge/{operator_id} | ❌ Pending |
-
-### 9. Tour Guides (7 endpoints)
-| Method | Django Endpoint | Node Status |
-|--------|----------------|-------------|
-| GET | /tour_guides | ❌ Pending |
-| POST | /tour_guides | ❌ Pending |
-| GET | /tour_guides/{_id} | ❌ Pending |
-| PUT | /tour_guides/{_id} | ❌ Pending |
-| PATCH | /tour_guides/{_id} | ❌ Pending |
-| DELETE | /tour_guides/{_id} | ❌ Pending |
-| GET | /tour_guides_by_location | ❌ Pending |
 
 ### 10. Restaurants (8 endpoints)
 | Method | Django Endpoint | Node Status |

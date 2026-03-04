@@ -63,9 +63,16 @@ import { TempleTransportService } from './temple-transport.service';
 import { TemplePoojaTimingController } from './temple-pooja-timing.controller';
 import { TemplePoojaTimingService } from './temple-pooja-timing.service';
 import { TemplePoojaTiming } from './pooja-timing.model';
+import { PrayersAndBenefits } from './prayers-and-benefits.model';
+import { ConfigModule } from '@nestjs/config';
+import { SocialActivityController } from './social-activity.controller';
+import { SocialActivityService } from './social-activity.service';
+import { PrayersAndBenefitsController } from './prayers-and-benefits.controller';
+import { PrayersAndBenefitsService } from './prayers-and-benefits.service';
 
 @Module({
   imports: [
+    ConfigModule,
     SequelizeModule.forFeature([
       Temple,
       AddTempleDetails,
@@ -100,6 +107,7 @@ import { TemplePoojaTiming } from './pooja-timing.model';
       Comment,
       Connect,
       TemplePoojaTiming,
+      PrayersAndBenefits,
     ]),
   ],
   controllers: [
@@ -118,6 +126,8 @@ import { TemplePoojaTiming } from './pooja-timing.model';
     TempleController,
     TempleTransportController,
     TemplePoojaTimingController,
+    SocialActivityController,
+    PrayersAndBenefitsController,
   ],
   providers: [
     AddTempleDetailsService,
@@ -135,6 +145,8 @@ import { TemplePoojaTiming } from './pooja-timing.model';
     TempleService,
     TempleTransportService,
     TemplePoojaTimingService,
+    SocialActivityService,
+    PrayersAndBenefitsService,
   ],
 })
 export class TempleModule {}

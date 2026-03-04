@@ -22,6 +22,7 @@ import { LocationsModule } from './locations/locations.module';
 import { AdminModule } from './admin/admin.module';
 import { FireStationsModule } from './fire-station/fire-stations.module';
 import { GlobalSearchModule } from './global-search/global-search.module';
+import { PoliceStationModule } from './police-station/police-station.module';
 
 @Module({
   imports: [AuthModule, 
@@ -46,6 +47,7 @@ import { GlobalSearchModule } from './global-search/global-search.module';
     AdminModule,
     FireStationsModule,
     GlobalSearchModule,
+    PoliceStationModule,
   ],
   controllers: [GramadevataController],
 })

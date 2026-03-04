@@ -2,7 +2,7 @@ import { CreationOptional } from 'sequelize';
 import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
 import { Temple } from '../temple/temple.model';
 import { ActivityOption, EntityStatus } from '../../common/enums';
-// import { Register } from '../auth/user.model';
+import { Register } from '../auth/user.model';
 
 @Table({ tableName: 'prayers_and_benefits', timestamps: false })
 export class PrayersAndBenefits extends Model<PrayersAndBenefits> {
@@ -23,12 +23,12 @@ export class PrayersAndBenefits extends Model<PrayersAndBenefits> {
   @BelongsTo(() => Temple)
   declare temple?: Temple;
 
-  // @ForeignKey(() => Register)
-  // @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
-  // declare userId?: string;
+  @ForeignKey(() => Register)
+  @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
+  declare userId?: string;
 
-  // @BelongsTo(() => Register)
-  // declare user?: Register;
+  @BelongsTo(() => Register, { foreignKey: 'userId', onDelete: 'CASCADE' })
+  declare user?: Register;
 
   @Column({ type: DataType.STRING(20), allowNull: true, defaultValue: ActivityOption.NO, field: 'homam', validate: { isIn: [Object.values(ActivityOption)] } })
   declare homam?: string;
