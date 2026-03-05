@@ -1,7 +1,7 @@
 
 # Gramadevata: Django → Node.js Migration Status
 
-**Date:** 4 March 2026
+**Date:** 5 March 2026
 
 ---
 
@@ -10,12 +10,12 @@
 | Metric                    | Count | Percentage |
 |---------------------------|-------|------------|
 | **Total Django Endpoints** | ~463  | 100%       |
-| **Done in Node.js**        | ~318  | **~69%**   |
-| **Pending in Node.js**     | ~145  | **~31%**   |
+| **Done in Node.js**        | ~335  | **~72%**   |
+| **Pending in Node.js**     | ~128  | **~28%**   |
 
 ---
 
-## DONE - Endpoints Already in Node.js (~318 endpoints)
+## DONE - Endpoints Already in Node.js (~335 endpoints)
 
 | Category | Endpoints | Count |
 |----------|-----------|-------|
@@ -58,6 +58,16 @@
 | add_more_goshala_details | CRUD | 6 |
 | globalgoshala | GET | 1 |
 | goshala | CRUD | 6 |
+| goshala_inactive | GET | 1 |
+| goshala_inactive_get | GET /{field_name}/{input_value} | 1 |
+| goshalamain | GET | 1 |
+| goshalamerge | PUT /{goshala_id} | 1 |
+| goshalapost | POST | 1 |
+| goshalas_by_location | GET block_id, district_id, state_id | 3 |
+| InactivelocationByGoshalas | GET | 1 |
+| locationByGoshalas | GET | 1 |
+| indiagoshalas | GET | 1 |
+| goshalacategories | CRUD | 6 |
 | add_more_hotel | CRUD | 6 |
 | add_more_pooja_store | CRUD | 6 |
 | add_more_restaurants | CRUD | 6 |
@@ -92,7 +102,7 @@
 
 ---
 
-## PENDING - Django Endpoints NOT Yet in Node.js (~145 endpoints)
+## PENDING - Django Endpoints NOT Yet in Node.js (~128 endpoints)
 
 ### 1. State CRUD (6 endpoints)
 | Method | Django Endpoint | Node Status |
@@ -139,27 +149,27 @@
 | GET | /towntemples_bylocation | ❌ Pending |
 | GET | /indiatemples | ❌ Pending |
 
-### 5. Goshala - Additional Endpoints (17 endpoints)
+### 5. Goshala - Additional Endpoints (17 endpoints) ✅ Done
 | Method | Django Endpoint | Node Status |
 |--------|----------------|-------------|
-| GET | /goshala_inactive | ❌ Pending |
-| GET | /goshala_inactive_get/{field_name}/{input_value}/ | ❌ Pending |
-| GET | /goshalamain | ❌ Pending |
-| PUT | /goshalamerge/{goshala_id} | ❌ Pending |
-| POST | /goshalapost | ❌ Pending |
-| GET | /goshalas/block_id/{block_id}/ | ❌ Pending |
-| GET | /goshalas/district_id/{district_id}/ | ❌ Pending |
-| GET | /goshalas/state_id/{state_id}/ | ❌ Pending |
-| GET | /InactivelocationByGoshalas | ❌ Pending |
-| GET | /locationByGoshalas/ | ❌ Pending |
-| GET | /indiagoshalas | ❌ Pending |
+| GET | /goshala_inactive | ✅ Done |
+| GET | /goshala_inactive_get/{field_name}/{input_value}/ | ✅ Done |
+| GET | /goshalamain | ✅ Done |
+| PUT | /goshalamerge/{goshala_id} | ✅ Done |
+| POST | /goshalapost | ✅ Done |
+| GET | /goshalas/block_id/{block_id}/ | ✅ Done |
+| GET | /goshalas/district_id/{district_id}/ | ✅ Done |
+| GET | /goshalas/state_id/{state_id}/ | ✅ Done |
+| GET | /InactivelocationByGoshalas | ✅ Done |
+| GET | /locationByGoshalas/ | ✅ Done |
+| GET | /indiagoshalas | ✅ Done |
 | **goshalacategories CRUD** | | |
-| GET | /goshalacategories | ❌ Pending |
-| POST | /goshalacategories | ❌ Pending |
-| GET | /goshalacategories/{_id} | ❌ Pending |
-| PUT | /goshalacategories/{_id} | ❌ Pending |
-| PATCH | /goshalacategories/{_id} | ❌ Pending |
-| DELETE | /goshalacategories/{_id} | ❌ Pending |
+| GET | /goshalacategories | ✅ Done |
+| POST | /goshalacategories | ✅ Done |
+| GET | /goshalacategories/{_id} | ✅ Done |
+| PUT | /goshalacategories/{_id} | ✅ Done |
+| PATCH | /goshalacategories/{_id} | ✅ Done |
+| DELETE | /goshalacategories/{_id} | ✅ Done |
 
 ### 6. Event - Additional Endpoints (3 endpoints)
 | Method | Django Endpoint | Node Status |
@@ -241,7 +251,7 @@ State                        |    6    |    0
 Profile Management           |    6    |    1 (admin_profile_get_by_id)
 Auth / SSO / Token           |    2    |    2 (register, verify)
 Temple (extra)               |   15    |   ~65
-Goshala (extra + categories) |   17    |   ~13
+Goshala (extra + categories) |    0    |   ~30
 Event (extra)                |    3    |   ~28
 Tourism                      |    9    |    0
 Tour Operators               |    8    |    6 (add_more_tour-operators only)
@@ -261,7 +271,7 @@ Share                        |    2    |    0
 Home                         |    1    |    0
 Country (get by id)          |    1    |    1 (list only)
 -----------------------------|---------|-------------
-TOTAL PENDING                |  ~145   |
+TOTAL PENDING                |  ~128   |
 ```
 
 ---
@@ -269,14 +279,14 @@ TOTAL PENDING                |  ~145   |
 ## Visual Progress
 
 ```
-Overall Migration: ██████████████░░░░░░░ 69% Done | 31% Pending
+Overall Migration: ██████████████░░░░░░░ 72% Done | 28% Pending
 
 By Area:
   Villages:      ████████████████████ 97%  (only merge + by_location missing)
   Events:        ████████████████████ 90%  (location/inactive extras missing)
   Temple:        ████████████████░░░░ 80%  (merge/inactive/location extras missing)
   Welfare:       ████████████████████ 100%
-  Goshala:       ██████████░░░░░░░░░░ 50%  (categories, merge, location missing)
+  Goshala:       ████████████████████ 100%
   Blood Bank:    ██████████████░░░░░░ 54%  (add_more_blood_bank missing)
   Vet Hospital:  ████████████████████ 100%
   Accommodation: ████████████████████ 100%
