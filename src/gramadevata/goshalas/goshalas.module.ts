@@ -22,6 +22,8 @@ import { GoshalasExtrasController } from './goshalas-extras.controller';
 import { GoshalaCategoryController } from './goshala-category.controller';
 import { GoshalaCategoryService } from './goshala-category.service';
 import { GoshalaCategory } from './goshala-category.model';
+import { GoshalasByLocationController } from './goshalas-by-location.controller';
+import { GoshalasByLocationService } from './goshalas-by-location.service';
 
 @Module({
   imports: [
@@ -44,7 +46,10 @@ import { GoshalaCategory } from './goshala-category.model';
   controllers: [AddGoshalaDetailsController, GlobalGoshalasController, GoshalaController, 
     GoshalasExtrasController,
     GoshalaCategoryController,
+    GoshalasByLocationController,
   ],
-  providers: [AddGoshalaDetailsService, GlobalGoshalasService, GoshalaService, GoshalaCategoryService],
+  providers: [AddGoshalaDetailsService, GlobalGoshalasService, GoshalaService, GoshalaCategoryService,
+    GoshalasByLocationService,
+  ],
 })
 export class GoshalasModule {}
