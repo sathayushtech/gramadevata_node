@@ -6,6 +6,7 @@ import type { CreationAttributes } from 'sequelize';
 import nodemailer from 'nodemailer';
 import { AddGoshalaDetails } from './add-ghoshala.model';
 import { Register as User } from '../auth/user.model';
+import { Goshala } from './goshala.model';
 
 type CreateResult = {
   status: number;
@@ -17,6 +18,9 @@ export class AddGoshalaDetailsService {
   constructor(
     @InjectModel(AddGoshalaDetails)
     private readonly addGoshalaDetailsModel: typeof AddGoshalaDetails,
+    @InjectModel(Goshala)
+    private readonly goshalaModel: typeof Goshala,
+
     @InjectModel(User)
     private readonly userModel: typeof User,
     private readonly configService: ConfigService
@@ -379,5 +383,129 @@ export class AddGoshalaDetailsService {
       secure: port === 465,
       auth: { user, pass },
     });
+  }
+
+  async mergeGoshalaDetails(goshalaId: string, payload: Record<string, unknown>) {
+    try {
+      const goshala = await this.goshalaModel.findByPk(goshalaId);
+      if (!goshala) {
+        return { status: 404, body: { message: 'Goshala not found' } };
+      }
+
+      const newDesc = typeof payload.desc === 'string' ? payload.desc : '';
+      const newImages = this.parseImages(payload.image_location ?? payload.imageLocation);
+      const newMapUrls = this.parseListField(payload.map_location ?? payload.mapLocation);
+      const newVideos = this.parseListField(payload.goshala_video ?? payload.goshalaVideo);
+
+      const oldDesc = typeof goshala.desc === 'string' ? goshala.desc : '';
+      const oldImages = this.parseImages(goshala.imageLocation);
+      const oldMapUrls = this.parseListField(goshala.mapLocation);
+      const oldVideos = this.parseListField(goshala.goshalaVideo);
+
+      const details = await this.addGoshalaDetailsModel.findAll({ where: { goshalaId } });
+
+      const allDescs: string[] = [];
+      const allImages: string[] = [];
+      const allMapUrls: string[] = [];
+      const allVideos: string[] = [];
+
+      for (const detail of details) {
+        if (detail.desc) {
+          allDescs.push(detail.desc.trim());
+        }
+        allImages.push(...this.parseImages(detail.imageLocation));
+        allMapUrls.push(...this.parseListField(detail.mapLocation));
+        allVideos.push(...this.parseListField(detail.goshalaVideo));
+      }
+
+      const mergedDesc = this.uniqueStrings([oldDesc.trim(), ...allDescs, newDesc.trim()].filter(Boolean)).join(', ');
+      const mergedImages = this.uniqueStrings([...oldImages, ...allImages, ...newImages]);
+      const mergedMapUrls = this.uniqueStrings([...oldMapUrls, ...allMapUrls, ...newMapUrls]);
+      const mergedVideos = this.uniqueStrings([...oldVideos, ...allVideos, ...newVideos]);
+
+      goshala.desc = mergedDesc;
+      goshala.imageLocation = JSON.stringify(mergedImages) as unknown as Goshala['imageLocation'];
+      goshala.mapLocation = JSON.stringify(mergedMapUrls);
+      goshala.goshalaVideo = mergedVideos as unknown as Goshala['goshalaVideo'];
+      goshala.status = 'ACTIVE';
+      await goshala.save();
+
+      if (details.length) {
+        await this.addGoshalaDetailsModel.destroy({ where: { goshalaId } });
+      }
+
+      await this.addGoshalaDetailsModel.create({
+        goshalaId,
+        desc: mergedDesc,
+        imageLocation: JSON.stringify(mergedImages),
+        mapLocation: JSON.stringify(mergedMapUrls),
+        goshalaVideo: mergedVideos,
+        status: 'ACTIVE',
+      } as CreationAttributes<AddGoshalaDetails>);
+
+      const base = (this.configService.get<string>('FILE_URL') || '').replace(/\/+$/, '');
+      const baseUrl = base ? `${base}/` : '';
+
+      return {
+        status: 200,
+        body: {
+          goshala_id: goshala.id,
+          name: goshala.name,
+          desc: mergedDesc,
+          image_location: mergedImages.map((img) => `${baseUrl}${img}`),
+          map_location: mergedMapUrls,
+          goshala_video: mergedVideos.map((vid) => `${baseUrl}${vid}`),
+          status: 'ACTIVE',
+        },
+      };
+    } catch (error) {
+      return {
+        status: 500,
+        body: { message: 'Error occurred', error: error instanceof Error ? error.message : String(error) },
+      };
+    }
+  }
+
+  private parseListField(raw: unknown): string[] {
+    if (Array.isArray(raw)) {
+      return raw.map((item) => String(item).trim()).filter(Boolean);
+    }
+
+    if (!raw) {
+      return [];
+    }
+
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => String(item).trim()).filter(Boolean);
+        }
+      } catch {
+        // ignore
+      }
+      return [raw.trim()].filter(Boolean);
+    }
+
+    return [];
+  }
+
+  private parseImages(raw: unknown): string[] {
+    return this.parseListField(raw)
+      .map((item) => item.replace(/\\/g, '/').replace(/^\/+/, ''))
+      .filter(Boolean);
+  }
+
+  private uniqueStrings(values: string[]) {
+    const seen = new Set<string>();
+    const result: string[] = [];
+    values.forEach((value) => {
+      if (!value || seen.has(value)) {
+        return;
+      }
+      seen.add(value);
+      result.push(value);
+    });
+    return result;
   }
 }

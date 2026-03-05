@@ -2,6 +2,8 @@ import { ConfigService } from '@nestjs/config';
 import { BlobServiceClient } from '@azure/storage-blob';
 import * as nodemailer from 'nodemailer';
 import { randomBytes } from 'crypto';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 export function coerceStringList(value: unknown): string[] {
   if (value === null || value === undefined) {
@@ -288,4 +290,29 @@ export async function sendAdminEmail(configService: ConfigService, opts: { subje
     subject: opts.subject,
     text: opts.text,
   });
+}
+
+export async function saveImageToFolder(opts: {
+  baseDir: string;
+  base64: string;
+  id: string;
+  name: string;
+  entityType: string;
+  extension?: string;
+}): Promise<string | null> {
+  const { baseDir, base64, id, name, entityType, extension } = opts;
+  if (!baseDir) {
+    return null;
+  }
+
+  const decoded = Buffer.from(stripBase64Prefix(base64), 'base64');
+  const ext = (extension || 'jpg').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'jpg';
+  const fileName = `${name}_${randomBytes(4).toString('hex')}.${ext}`;
+  const folderPath = path.join(baseDir, entityType, id);
+  await fs.mkdir(folderPath, { recursive: true });
+
+  const filePath = path.join(folderPath, fileName);
+  await fs.writeFile(filePath, decoded);
+
+  return path.posix.join(entityType, id, fileName);
 }

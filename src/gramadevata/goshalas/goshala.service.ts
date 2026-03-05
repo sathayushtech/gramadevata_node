@@ -12,6 +12,7 @@ import { District } from '../../common/models/district.model';
 import { State } from '../../common/models/state.model';
 import { Country } from '../../common/models/country.model';
 import { Goshala } from './goshala.model';
+import { GoshalaCategory } from './goshala-category.model';
 import { Temple } from '../temple/temple.model';
 import { Event } from '../events/event.model';
 import { NearbyVeterinaryHospital } from '../hospital/nearby-veterinary-hospital.model';
@@ -27,6 +28,8 @@ export class GoshalaService {
 	constructor(
 		@InjectModel(Goshala)
 		private readonly goshalaModel: typeof Goshala,
+		@InjectModel(GoshalaCategory)
+		private readonly goshalaCategoryModel: typeof GoshalaCategory,
 		@InjectModel(Temple)
 		private readonly templeModel: typeof Temple,
 		@InjectModel(Event)
@@ -251,6 +254,173 @@ export class GoshalaService {
 
 		await record.destroy();
 		return true;
+	}
+
+	async listInactive(query: Record<string, string | undefined>) {
+		const searchQuery = typeof query.search === 'string' ? query.search.trim() : '';
+		const filters = this.buildFilters(query);
+		delete (filters as Record<string, unknown>).search;
+
+		const where: Record<string, unknown> = {
+			...filters,
+			status: 'INACTIVE',
+		};
+
+		if (searchQuery) {
+			(where as Record<string | symbol, unknown>)[Op.or] = [
+				{ name: { [Op.like]: `%${searchQuery}%` } },
+				{ address: { [Op.like]: `%${searchQuery}%` } },
+			];
+		}
+
+		const records = await this.goshalaModel.findAll({
+			where,
+			order: [['createdAt', 'DESC']],
+		});
+
+		if (!records.length) {
+			return { status: 404, body: { message: 'Data not found', status: 404 } };
+		}
+
+		const responses = await this.toInactiveResponses(records);
+
+		return {
+			status: 200,
+			body: {
+				count: responses.length,
+				goshala: responses,
+			},
+		};
+	}
+
+	async getInactiveByField(fieldName: string, inputValue: string) {
+		const resolvedField = this.resolveGoshalaFieldName(fieldName);
+		if (!resolvedField || !this.isGoshalaField(resolvedField)) {
+			return {
+				status: 400,
+				body: {
+					message: `Invalid field name: '${fieldName}'`,
+					status: 400,
+				},
+			};
+		}
+
+		const records = await this.goshalaModel.findAll({
+			where: { [resolvedField]: inputValue, status: 'INACTIVE' },
+			include: this.getLocationInclude(),
+		});
+
+		if (!records.length) {
+			return { status: 404, body: { message: 'Data not found', status: 404 } };
+		}
+
+		const results = [] as Record<string, unknown>[];
+		for (const record of records) {
+			results.push(await this.toGoshalaResponse(record));
+		}
+
+		return { status: 200, body: results };
+	}
+
+	private async toInactiveResponses(records: Goshala[]) {
+		const userIds = Array.from(
+			new Set(records.map((goshala) => goshala.user).filter((id): id is string => Boolean(id)))
+		);
+
+		const users = userIds.length
+			? await this.userModel.findAll({ where: { id: { [Op.in]: userIds } } })
+			: [];
+
+		const userMap = new Map(users.map((user) => [user.id, user.fullName ?? null]));
+
+		return records.map((record) => this.toGoshalaInactiveResponse(record, userMap));
+	}
+
+	private toGoshalaInactiveResponse(record: Goshala, userMap: Map<string, string | null>) {
+		const plain = record.get({ plain: true }) as Goshala;
+		const baseUrl = this.getBaseUrl();
+
+		return {
+			_id: plain.id,
+			name: plain.name ?? null,
+			category: plain.category ?? null,
+			reg_num: plain.regNum ?? null,
+			status: plain.status ?? null,
+			geo_site: plain.geoSite ?? null,
+			object_id: plain.objectId ?? null,
+			map_location: plain.mapLocation ?? null,
+			temple_id: plain.temple ?? null,
+			contact_name: plain.contactName ?? null,
+			contact_phone: plain.contactPhone ?? null,
+			address: plain.address ?? null,
+			email: plain.email ?? null,
+			desc: plain.desc ?? null,
+			regn_document: plain.regnDocument ?? null,
+			image_location: this.mapFileList(plain.imageLocation, baseUrl),
+			goshala_video: this.mapFileListOrNull(plain.goshalaVideo, baseUrl),
+			user: plain.user ?? null,
+			managed_by: plain.managedBy ?? null,
+			timings: plain.timings ?? null,
+			official_website: plain.officialWebsite ?? null,
+			country_name: plain.countryName ?? null,
+			state_name: plain.stateName ?? null,
+			district_name: plain.districtName ?? null,
+			block_name: plain.blockName ?? null,
+			village_name: plain.villageName ?? null,
+			other_name: plain.otherName ?? null,
+			devotees_visiting: plain.devoteesVisiting ?? null,
+			feeding_accessibility: plain.feedingAccessibility ?? null,
+			inside_feeding_accessibility: plain.insideFeedingAccessibility ?? null,
+			outside_feeding_accessibility: plain.outsideFeedingAccessibility ?? null,
+			adoption_of_cow_or_bull_inside: plain.adoptionOfCowOrBullInside ?? null,
+			adoption_of_cow_or_bull_outside: plain.adoptionOfCowOrBullOutside ?? null,
+			festivals: plain.festivals ?? null,
+			prayers: plain.prayers ?? null,
+			social_activites: plain.socialActivites ?? null,
+			other_services: plain.otherServices ?? null,
+			created_at: plain.createdAt ?? null,
+			country: plain.country ?? null,
+			user_full_name: plain.user ? userMap.get(plain.user) ?? null : null,
+			relative_time: plain.createdAt ? this.timeSince(plain.createdAt) : null,
+		};
+	}
+
+	private resolveGoshalaFieldName(fieldName: string) {
+		if (fieldName === '_id') {
+			return 'id';
+		}
+
+		const mapping: Record<string, string> = {
+			object_id: 'objectId',
+			reg_num: 'regNum',
+			geo_site: 'geoSite',
+			map_location: 'mapLocation',
+			temple_id: 'temple',
+			contact_name: 'contactName',
+			contact_phone: 'contactPhone',
+			official_website: 'officialWebsite',
+			regn_document: 'regnDocument',
+			country_name: 'countryName',
+			state_name: 'stateName',
+			district_name: 'districtName',
+			block_name: 'blockName',
+			village_name: 'villageName',
+			other_name: 'otherName',
+			devotees_visiting: 'devoteesVisiting',
+			feeding_accessibility: 'feedingAccessibility',
+			inside_feeding_accessibility: 'insideFeedingAccessibility',
+			outside_feeding_accessibility: 'outsideFeedingAccessibility',
+			adoption_of_cow_or_bull_inside: 'adoptionOfCowOrBullInside',
+			adoption_of_cow_or_bull_outside: 'adoptionOfCowOrBullOutside',
+			social_activites: 'socialActivites',
+			other_services: 'otherServices',
+		};
+
+		return mapping[fieldName] ?? fieldName;
+	}
+
+	private isGoshalaField(fieldName: string) {
+		return Object.prototype.hasOwnProperty.call(this.goshalaModel.rawAttributes, fieldName);
 	}
 
 	private buildFilters(query: Record<string, string | undefined>): WhereOptions<Goshala> {
@@ -781,4 +951,125 @@ export class GoshalaService {
 		}
 		return `${seconds} seconds ago`;
 	}
+
+	async getGoshalaMain(): Promise<Record<string, unknown>> {
+		const [categories, villages] = await Promise.all([
+			this.goshalaCategoryModel.findAll({ limit: 4 }),
+			this.villageModel.findAll(),
+		]);
+
+		const villageIds = villages.map((village) => village.id);
+
+		const indianGoshalas = villageIds.length
+			? await this.goshalaModel.findAll({
+				where: { objectId: { [Op.in]: villageIds } },
+				include: this.getLocationInclude(),
+				limit: 4,
+			})
+			: [];
+
+		const globalGoshalas = await this.goshalaModel.findAll({
+			where: {
+				...(villageIds.length ? { objectId: { [Op.notIn]: villageIds } } : {}),
+				geoSite: { [Op.notIn]: ['D', 'B', 'V'] },
+			},
+			include: this.getLocationInclude(),
+			limit: 4,
+		});
+
+		const categoriesResponse = categories.map((category) => this.toCategoryResponse(category));
+		const indianResponses = [] as Record<string, unknown>[];
+		for (const record of indianGoshalas) {
+			indianResponses.push(await this.toGoshalaResponse(record));
+		}
+		const globalResponses = [] as Record<string, unknown>[];
+		for (const record of globalGoshalas) {
+			globalResponses.push(await this.toGoshalaResponse(record));
+		}
+
+		return {
+			categories: categoriesResponse,
+			indiangoshalas: indianResponses,
+			globalgoshalas: globalResponses,
+		};
+	}
+
+	async createPost(payload: Record<string, unknown>, userPayload?: Record<string, unknown>): Promise<CreateResult> {
+		try {
+			const user = await this.resolveUser(userPayload);
+			if (!user) {
+				return { status: 404, body: { message: 'User not found in Register.' } };
+			}
+
+			const memberFlag = (user.isMember ?? '').toString().toUpperCase();
+			if (memberFlag === 'NO') {
+				return {
+					status: 400,
+					body: {
+						message:
+							'Cannot add the temple. Membership details are required. Update your profile and become a member.',
+					},
+				};
+			}
+
+			const imageLocation = payload.image_location;
+			const createData = this.mapPayload(payload, user.id);
+			createData.imageLocation = 'null' as unknown as Goshala['imageLocation'];
+
+			const record = await this.goshalaModel.create(createData as CreationAttributes<Goshala>);
+
+			if (imageLocation && imageLocation !== 'null') {
+				const baseDir =
+					this.configService.get<string>('FILE_URL') ||
+					this.configService.get<string>('File_path') ||
+					'';
+				const savedLocation = await GramadevataUtils.saveImageToFolder({
+					baseDir,
+					base64: String(imageLocation),
+					id: record.id,
+					name: record.name ?? 'goshala',
+					entityType: 'goshala',
+				});
+				if (savedLocation) {
+					record.imageLocation = savedLocation;
+					await record.save();
+				}
+			}
+
+			return {
+				status: 201,
+				body: {
+					message: 'success',
+					result: await this.toGoshalaResponse(record),
+				},
+			};
+		} catch (error) {
+			return {
+				status: 500,
+				body: { message: 'An error occurred.', error: error instanceof Error ? error.message : String(error) },
+			};
+		}
+	}
+
+	private toCategoryResponse(category: GoshalaCategory) {
+		return {
+			_id: category.id,
+			name: category.name,
+			desc: category.desc ?? null,
+			created_at: category.createdAt ?? null,
+			pic: this.mapPic(category.pic),
+		};
+	}
+
+	private mapPic(pic?: string | null) {
+		if (!pic) {
+			return null;
+		}
+		if (pic.startsWith('http://') || pic.startsWith('https://')) {
+			return pic;
+		}
+		const base = this.getBaseUrl();
+		return base ? `${base}/${pic.replace(/^\/+/, '')}` : pic;
+	}
+
 }

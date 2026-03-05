@@ -13,8 +13,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AddMoreBloodBankService } from './add-more-blood-bank.service';
+import { ApiTags } from '@nestjs/swagger';
 
 @Controller('gramadevata')
+@ApiTags('Add More Blood Bank')
 export class AddMoreBloodBankController {
   constructor(
     private readonly addMoreService: AddMoreBloodBankService,

@@ -18,6 +18,10 @@ import { GlobalGoshalasController } from './global-goshalas.controller';
 import { GlobalGoshalasService } from './global-goshalas.service';
 import { GoshalaController } from './goshala.controller';
 import { GoshalaService } from './goshala.service';
+import { GoshalasExtrasController } from './goshalas-extras.controller';
+import { GoshalaCategoryController } from './goshala-category.controller';
+import { GoshalaCategoryService } from './goshala-category.service';
+import { GoshalaCategory } from './goshala-category.model';
 
 @Module({
   imports: [
@@ -34,9 +38,13 @@ import { GoshalaService } from './goshala.service';
       Country,
       Temple,
       Event,
+      GoshalaCategory
     ]),
   ],
-  controllers: [AddGoshalaDetailsController, GlobalGoshalasController, GoshalaController],
-  providers: [AddGoshalaDetailsService, GlobalGoshalasService, GoshalaService],
+  controllers: [AddGoshalaDetailsController, GlobalGoshalasController, GoshalaController, 
+    GoshalasExtrasController,
+    GoshalaCategoryController,
+  ],
+  providers: [AddGoshalaDetailsService, GlobalGoshalasService, GoshalaService, GoshalaCategoryService],
 })
 export class GoshalasModule {}
