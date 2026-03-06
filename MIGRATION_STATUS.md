@@ -1,108 +1,12 @@
 
 # Gramadevata: Django → Node.js Migration Status
 
-**Date:** 5 March 2026
-
----
-
-## Summary
-
 | Metric                    | Count | Percentage |
 |---------------------------|-------|------------|
 | **Total Django Endpoints** | ~463  | 100%       |
-| **Done in Node.js**        | ~335  | **~72%**   |
-| **Pending in Node.js**     | ~128  | **~28%**   |
 
----
 
-## DONE - Endpoints Already in Node.js (~335 endpoints)
-
-| Category | Endpoints | Count |
-|----------|-----------|-------|
-| Health | GET /health, GET /gramadevata/health | 2 (Node-only) |
-| Auth | POST /register, POST /verify, GET /admin_profile_get_by_id/{id} | 3 |
-| Comments | CRUD /comments + POST mark-as-inactive | 7 |
-| Events by Location | GET state_id, district_id, block_id | 3 |
-| add_more_event_details | CRUD (GET, POST, GET/{id}, PATCH/{id}, PUT/{id}, DELETE/{id}) | 6 |
-| event | CRUD | 6 |
-| eventcategory | CRUD | 6 |
-| eventmerge | PUT /{event_id} | 1 |
-| eventpost | POST | 1 |
-| eventsmain | GET | 1 |
-| eventsstatus | GET | 1 |
-| events_inactive | GET | 1 |
-| events_inactive_get | GET /{field_name}/{input_value} | 1 |
-| globalevents | GET | 1 |
-| village | CRUD | 6 |
-| search_village | GET | 1 |
-| village_inactive | GET | 1 |
-| village_inactive_get | GET /{field_name}/{input_value} | 1 |
-| add_more_village_details | CRUD | 6 |
-| village_geographic | CRUD | 6 |
-| village-famous-personalities | CRUD | 6 |
-| village-development-facilities | CRUD | 6 |
-| village_school | CRUD | 6 |
-| village-bank | CRUD | 6 |
-| village-college | CRUD | 6 |
-| village-cultural-profile | CRUD | 6 |
-| village-artists | CRUD | 6 |
-| village-market | CRUD | 6 |
-| village-postoffice | CRUD | 6 |
-| village-sportsground | CRUD | 6 |
-| accommodation | CRUD | 6 |
-| welfare_homes_category | CRUD | 6 |
-| welfare_home | CRUD + by-location + inactive + inactive_by_location | 9 |
-| add_more_hospital | CRUD | 6 |
-| add_more_veterinary_hospital | CRUD | 6 |
-| veterinary_hospital | CRUD + by_location + merge | 8 |
-| add_more_goshala_details | CRUD | 6 |
-| globalgoshala | GET | 1 |
-| goshala | CRUD | 6 |
-| goshala_inactive | GET | 1 |
-| goshala_inactive_get | GET /{field_name}/{input_value} | 1 |
-| goshalamain | GET | 1 |
-| goshalamerge | PUT /{goshala_id} | 1 |
-| goshalapost | POST | 1 |
-| goshalas_by_location | GET block_id, district_id, state_id | 3 |
-| InactivelocationByGoshalas | GET | 1 |
-| locationByGoshalas | GET | 1 |
-| indiagoshalas | GET | 1 |
-| goshalacategories | CRUD | 6 |
-| add_more_hotel | CRUD | 6 |
-| add_more_pooja_store | CRUD | 6 |
-| add_more_restaurants | CRUD | 6 |
-| add_more_temple_details | CRUD | 6 |
-| api/temples | GET list + GET /{id} | 2 |
-| visit_temples | CRUD | 6 |
-| citytemples_bylocation | GET | 1 |
-| favorite-temples | CRUD | 6 |
-| globaltemples | GET | 1 |
-| templeCategeory | CRUD | 6 |
-| temple_main_category | CRUD | 6 |
-| templepriority | CRUD | 6 |
-| temple_facilities | CRUD | 6 |
-| temple_festivals | CRUD | 6 (Node-only) |
-| temple-nearby-hotels | CRUD + hotels_by_location | 7 |
-| temple | CRUD + locationByTemples + InactivelocationByTemples | 8 |
-| temple-transports | CRUD | 6 |
-| temple_pooja_timings | CRUD | 6 |
-| add_more_tour-operators | CRUD | 6 |
-| ambulance_facility | CRUD | 6 |
-| block | CRUD | 6 |
-| blood_bank | GET, POST, GET/{id}, PUT/{id}, DELETE/{id} + by_location + merge | 7 |
-| chat | CRUD | 6 |
-| connect | CRUD | 6 |
-| country | GET (list only) | 1 |
-| district | CRUD | 6 |
-| delete-member | DELETE /{id} | 1 |
-| delete-pujari | DELETE /{id} | 1 |
-| deleteimage | POST /{id} | 1 |
-| fire_station | CRUD | 6 |
-| global_search | GET | 1 |
-
----
-
-## PENDING - Django Endpoints NOT Yet in Node.js (~128 endpoints)
+## PENDING - Django Endpoints NOT Yet in Node.js
 
 ### 1. State CRUD (6 endpoints)
 | Method | Django Endpoint | Node Status |
@@ -148,28 +52,6 @@
 | GET | /statetemples_bylocation | ❌ Pending |
 | GET | /towntemples_bylocation | ❌ Pending |
 | GET | /indiatemples | ❌ Pending |
-
-### 5. Goshala - Additional Endpoints (17 endpoints) ✅ Done
-| Method | Django Endpoint | Node Status |
-|--------|----------------|-------------|
-| GET | /goshala_inactive | ✅ Done |
-| GET | /goshala_inactive_get/{field_name}/{input_value}/ | ✅ Done |
-| GET | /goshalamain | ✅ Done |
-| PUT | /goshalamerge/{goshala_id} | ✅ Done |
-| POST | /goshalapost | ✅ Done |
-| GET | /goshalas/block_id/{block_id}/ | ✅ Done |
-| GET | /goshalas/district_id/{district_id}/ | ✅ Done |
-| GET | /goshalas/state_id/{state_id}/ | ✅ Done |
-| GET | /InactivelocationByGoshalas | ✅ Done |
-| GET | /locationByGoshalas/ | ✅ Done |
-| GET | /indiagoshalas | ✅ Done |
-| **goshalacategories CRUD** | | |
-| GET | /goshalacategories | ✅ Done |
-| POST | /goshalacategories | ✅ Done |
-| GET | /goshalacategories/{_id} | ✅ Done |
-| PUT | /goshalacategories/{_id} | ✅ Done |
-| PATCH | /goshalacategories/{_id} | ✅ Done |
-| DELETE | /goshalacategories/{_id} | ✅ Done |
 
 ### 6. Event - Additional Endpoints (3 endpoints)
 | Method | Django Endpoint | Node Status |
@@ -241,69 +123,4 @@
 | GET | /country/{_id} | ❌ Pending |
 
 ---
-
-## Pending by Category (Chart)
-
-```
-Category                     | Pending | Done in Node
------------------------------|---------|-------------
-State                        |    6    |    0
-Profile Management           |    6    |    1 (admin_profile_get_by_id)
-Auth / SSO / Token           |    2    |    2 (register, verify)
-Temple (extra)               |   15    |   ~65
-Goshala (extra + categories) |    0    |   ~30
-Event (extra)                |    3    |   ~28
-Tourism                      |    9    |    0
-Tour Operators               |    8    |    6 (add_more_tour-operators only)
-Tour Guides                  |    7    |    0
-Restaurants                  |    8    |    6 (add_more_restaurants only)
-Pooja Stores                 |    8    |    6 (add_more_pooja_store only)
-Nearby Hospitals             |    8    |    6 (add_more_hospital only)
-Blood Bank (add_more)        |    6    |    7 (blood_bank main done)
-Village (extra)              |    2    |   ~75
-Pujari Category              |    6    |    0
-Pujari Subcategories         |    6    |    0
-Media                        |    6    |    0
-Police Station               |    6    |    0
-Social Activities            |    6    |    0
-Prayers & Benefits           |    6    |    0
-Share                        |    2    |    0
-Home                         |    1    |    0
-Country (get by id)          |    1    |    1 (list only)
------------------------------|---------|-------------
-TOTAL PENDING                |  ~128   |
-```
-
----
-
-## Visual Progress
-
-```
-Overall Migration: ██████████████░░░░░░░ 72% Done | 28% Pending
-
-By Area:
-  Villages:      ████████████████████ 97%  (only merge + by_location missing)
-  Events:        ████████████████████ 90%  (location/inactive extras missing)
-  Temple:        ████████████████░░░░ 80%  (merge/inactive/location extras missing)
-  Welfare:       ████████████████████ 100%
-  Goshala:       ████████████████████ 100%
-  Blood Bank:    ██████████████░░░░░░ 54%  (add_more_blood_bank missing)
-  Vet Hospital:  ████████████████████ 100%
-  Accommodation: ████████████████████ 100%
-  Tourism:       ░░░░░░░░░░░░░░░░░░░░  0%  (entirely missing)
-  Tour Operators:██████░░░░░░░░░░░░░░ 43%  (add_more done, main CRUD missing)
-  Tour Guides:   ░░░░░░░░░░░░░░░░░░░░  0%  (entirely missing)
-  Restaurants:   ██████░░░░░░░░░░░░░░ 43%  (add_more done, main CRUD missing)
-  Pooja Stores:  ██████░░░░░░░░░░░░░░ 43%  (add_more done, main CRUD missing)
-  Hospitals:     ██████░░░░░░░░░░░░░░ 43%  (add_more done, nearby missing)
-  Pujari:        ░░░░░░░░░░░░░░░░░░░░  0%  (entirely missing)
-  Media:         ░░░░░░░░░░░░░░░░░░░░  0%  (entirely missing)
-  Police Station:░░░░░░░░░░░░░░░░░░░░  0%  (entirely missing)
-  Social:        ░░░░░░░░░░░░░░░░░░░░  0%  (entirely missing)
-  Prayers:       ░░░░░░░░░░░░░░░░░░░░  0%  (entirely missing)
-  Profile:       ██░░░░░░░░░░░░░░░░░░ 14%  (only admin get by id)
-  State:         ░░░░░░░░░░░░░░░░░░░░  0%  (entirely missing)
-  Share:         ░░░░░░░░░░░░░░░░░░░░  0%  (entirely missing)
-  Home:          ░░░░░░░░░░░░░░░░░░░░  0%  (entirely missing)
-```
 
