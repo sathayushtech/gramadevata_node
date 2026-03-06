@@ -597,7 +597,7 @@ export class GoshalaService {
 		];
 	}
 
-	async toGoshalaResponse(record: Goshala) {
+	async toGoshalaResponse(record: Goshala): Promise<Record<string, unknown>> {
 		const plain = record.get({ plain: true }) as Goshala & { village?: Village };
 		const baseUrl = this.getBaseUrl();
 
