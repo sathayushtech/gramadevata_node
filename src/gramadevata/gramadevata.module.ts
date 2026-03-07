@@ -10,7 +10,7 @@ import { HospitalsModule } from './hospital/hospitals.module';
 import { GoshalasModule } from './goshalas/goshalas.module';
 import { HotelModule } from './hotel/hotel.module';
 import { PoojaStoreModule } from './pooja-store/pooja-store.module';
-import { RestaurantModule } from './restaurant/pooja-store.module';
+import { RestaurantModule } from './restaurant/restaurants.module';
 import { TempleModule } from './temple/temple.module';
 import { TourismModule } from './tourism/tourism.module';
 import { AmbulanceFacilityModule } from './ambulance/ambulance-facility.module';

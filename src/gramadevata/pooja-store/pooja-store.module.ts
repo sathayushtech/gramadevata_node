@@ -5,6 +5,8 @@ import { AddMorePoojaStore } from './add-pooja-store.model';
 import { AddMorePoojaStoreController } from './add-more-pooja-store.controller';
 import { AddMorePoojaStoreService } from './add-more-pooja-store.service';
 import { Register as User } from '../auth/user.model';
+import { PoojaStoreController } from './pooja-store.controller';
+import { PoojaStoreService } from './pooja-store.service';
 
 @Module({
   imports: [
@@ -14,7 +16,7 @@ import { Register as User } from '../auth/user.model';
       User,
     ]),
   ],
-  controllers: [AddMorePoojaStoreController],
-  providers: [AddMorePoojaStoreService],
+  controllers: [AddMorePoojaStoreController, PoojaStoreController],
+  providers: [AddMorePoojaStoreService, PoojaStoreService],
 })
 export class PoojaStoreModule {}

@@ -21,6 +21,8 @@ import { CountryController } from './country.controller';
 import { CountryService } from './country.service';
 import { DistrictController } from './district.controller';
 import { DistrictService } from './district.service';
+import { StateController } from './state.controller';
+import { StateService } from './state.service';
 
 @Module({
   imports: [
@@ -44,7 +46,7 @@ import { DistrictService } from './district.service';
       WelfareHomes,
     ]),
   ],
-  controllers: [CountryController, DistrictController],
-  providers: [CountryService, DistrictService],
+  controllers: [CountryController, DistrictController, StateController],
+  providers: [CountryService, DistrictService, StateService],
 })
 export class LocationsModule {}

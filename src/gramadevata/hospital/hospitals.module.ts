@@ -12,6 +12,8 @@ import { AddMoreVeterinaryHospital } from './add-more-veterinary-hospital.model'
 import { NearbyVeterinaryHospitalController } from './nearby-veterinary-hospital.controller';
 import { NearbyVeterinaryHospitalService } from './nearby-veterinary-hospital.service';
 import { VeterinaryHospitalMergeController } from './veterinary-hospital-merge.controller';
+import { NearbyHospitalController } from './nearby-hospital.controller';
+import { NearbyHospitalService } from './nearby-hospital.service';
 
 @Module({
   imports: [
@@ -28,11 +30,13 @@ import { VeterinaryHospitalMergeController } from './veterinary-hospital-merge.c
     AddMoreVeterinaryHospitalController,
     NearbyVeterinaryHospitalController,
     VeterinaryHospitalMergeController,
+    NearbyHospitalController,
   ],
   providers: [
     AddMoreHospitalService,
     AddMoreVeterinaryHospitalService,
     NearbyVeterinaryHospitalService,
+    NearbyHospitalService,
   ],
 })
 export class HospitalsModule {}
