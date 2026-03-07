@@ -8,16 +8,6 @@
 
 ## PENDING - Django Endpoints NOT Yet in Node.js
 
-### 1. State CRUD (6 endpoints)
-| Method | Django Endpoint | Node Status |
-|--------|----------------|-------------|
-| GET | /state | ❌ Pending |
-| POST | /state | ❌ Pending |
-| GET | /state/{_id} | ❌ Pending |
-| PUT | /state/{_id} | ❌ Pending |
-| PATCH | /state/{_id} | ❌ Pending |
-| DELETE | /state/{_id} | ❌ Pending |
-
 ### 2. Profile Management (6 endpoints)
 | Method | Django Endpoint | Node Status |
 |--------|----------------|-------------|
@@ -64,24 +54,12 @@
 ### 10. Restaurants (8 endpoints)
 | Method | Django Endpoint | Node Status |
 |--------|----------------|-------------|
-| GET | /restaurants | ❌ Pending |
-| POST | /restaurants | ❌ Pending |
-| GET | /restaurants/{_id} | ❌ Pending |
-| PUT | /restaurants/{_id} | ❌ Pending |
-| PATCH | /restaurants/{_id} | ❌ Pending |
-| DELETE | /restaurants/{_id} | ❌ Pending |
 | GET | /restaurants_by_location | ❌ Pending |
 | PUT | /restaurant_merge/{restaurant_id} | ❌ Pending |
 
 ### 11. Pooja Stores (8 endpoints)
 | Method | Django Endpoint | Node Status |
 |--------|----------------|-------------|
-| GET | /pooja_stores | ❌ Pending |
-| POST | /pooja_stores | ❌ Pending |
-| GET | /pooja_stores/{_id} | ❌ Pending |
-| PUT | /pooja_stores/{_id} | ❌ Pending |
-| PATCH | /pooja_stores/{_id} | ❌ Pending |
-| DELETE | /pooja_stores/{_id} | ❌ Pending |
 | GET | /pooja_stores_by_location | ❌ Pending |
 | PUT | /pooja_store_merge/{pooja_store_id} | ❌ Pending |
 
