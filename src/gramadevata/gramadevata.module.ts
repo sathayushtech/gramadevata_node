@@ -25,6 +25,7 @@ import { GlobalSearchModule } from './global-search/global-search.module';
 import { PoliceStationModule } from './police-station/police-station.module';
 import { PujariModule } from './pujari/pujari.module';
 import { MediaModule } from './media/media.module';
+import { ProfileModule } from './profile/profile.module';
 
 @Module({
   imports: [AuthModule, 
@@ -52,6 +53,7 @@ import { MediaModule } from './media/media.module';
     PoliceStationModule,
     PujariModule,
     MediaModule,
+    ProfileModule,
   ],
   controllers: [GramadevataController],
 })

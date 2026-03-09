@@ -28,9 +28,6 @@ export class BloodBank extends Model<BloodBank> {
   @Column({ type: DataType.STRING(255), allowNull: true, field: 'map_location' })
   declare mapLocation?: string;
 
-  @Column({ type: DataType.TEXT, allowNull: true, field: 'desc' })
-  declare desc?: string;
-
   @ForeignKey(() => Temple)
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'temple_id' })
   declare templeId?: string;

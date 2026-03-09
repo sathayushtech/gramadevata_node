@@ -15,6 +15,7 @@ import { coerceList, extractLatLongFromUrl, toFileUrlList } from '../../common/u
 import { Block } from '../block/block.model';
 import { Village } from '../villages/village.model';
 import { Temple } from './temple.model';
+import { TempleCategory } from './temple-category.model';
 
 type PaginatedResponse<T> = {
   count: number;
@@ -44,6 +45,8 @@ export class TempleService {
     private readonly commentModel: typeof Comment,
     @InjectModel(User)
     private readonly userModel: typeof User,
+    @InjectModel(TempleCategory)
+    private readonly templeCategoryModel: typeof TempleCategory,
     private readonly configService: ConfigService,
   ) {}
 
@@ -783,5 +786,185 @@ export class TempleService {
     });
 
     return { count, next, previous, results };
+  }
+
+  // ──────────────── Django field-name → Sequelize attribute mapping ────────────────
+
+  private readonly DJANGO_FIELD_MAP: Record<string, string> = {
+    _id: 'id', category: 'categoryId', priority: 'priorityId', object_id: 'objectId',
+    user: 'userId', temple_map_location: 'templeMapLocation', contact_name: 'contactName',
+    contact_phone: 'contactPhone', contact_email: 'contactEmail', geo_site: 'geoSite',
+    old_temple_code: 'oldTempleCode', can_connect: 'canConnect', temple_area: 'templeArea',
+    temple_timings: 'templeTimings', temple_official_website: 'templeOfficialWebsite',
+    other_dieties: 'otherDieties', temple_management: 'templeManagement',
+    sthala_vriksha: 'sthalaVriksha', other_speciality: 'otherSpeciality',
+    sthala_puranam: 'sthalaPuranam', dress_code: 'dressCode', temple_video: 'templeVideo',
+    country_name: 'countryName', state_name: 'stateName', district_name: 'districtName',
+    block_name: 'blockName', village_name: 'villageName', other_name: 'otherName',
+    country: 'countryId', is_navagraha_established: 'isNavagrahaEstablished',
+    construction_year: 'constructionYear', is_destroyed: 'isDestroyed',
+    animal_sacrifice_status: 'animalSacrificeStatus', image_location: 'imageLocation',
+    created_at: 'createdAt',
+  };
+
+  // ──────────────── Village chain include reusable fragment ────────────────
+
+  private get villageChainInclude() {
+    return [
+      {
+        model: Village,
+        as: 'village',
+        include: [
+          {
+            model: Block,
+            as: 'block',
+            include: [
+              {
+                model: District,
+                as: 'district',
+                include: [
+                  { model: State, as: 'state', include: [{ model: Country, as: 'country' }] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+  }
+
+  // ──────────────── temple_inactive ────────────────
+
+  async listInactive(
+    basePath: string,
+    query: Record<string, string | undefined>,
+  ): Promise<PaginatedResponse<Record<string, unknown>>> {
+    const page = this.parsePage(query.page, 1);
+    const pageSize = this.parsePageSize(query.page_size, 50);
+
+    const where: Record<string | symbol, unknown> = { status: EntityStatus.INACTIVE };
+    const search = (query.search || '').trim();
+    if (search) {
+      (where as any)[Op.or] = [
+        { name: { [Op.like]: `%${search}%` } },
+        { address: { [Op.like]: `%${search}%` } },
+      ];
+    }
+
+    const priorityCase = this.buildCaseOrder('priority', this.priorityOrderIds, 999);
+
+    const { rows, count } = await this.templeModel.findAndCountAll({
+      where,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+      order: [[literal(priorityCase), 'ASC']],
+      include: [{ model: User, as: 'user' }],
+    });
+
+    const totalPages = Math.max(1, Math.ceil(count / pageSize));
+    const next = page < totalPages ? this.buildPageUrl(basePath, query, page + 1, pageSize) : null;
+    const previous = page > 1 ? this.buildPageUrl(basePath, query, page - 1, pageSize) : null;
+
+    const results = rows.map((t) => {
+      const plain = t.get({ plain: true }) as any;
+      return {
+        ...plain,
+        _id: plain.id,
+        image_location: toFileUrlList(this.configService, plain.imageLocation),
+        user_full_name: t.user?.fullName ?? null,
+        relative_time: this.humanRelativeTime(t.createdAt),
+      };
+    });
+
+    return { count, next, previous, results };
+  }
+
+  // ──────────────── temple_inactive_get ────────────────
+
+  async getInactiveByField(
+    fieldName: string,
+    inputValue: string,
+    user?: Record<string, unknown>,
+  ): Promise<Record<string, unknown>[]> {
+    const seqField = this.DJANGO_FIELD_MAP[fieldName] ?? fieldName;
+    const temples = await this.templeModel.findAll({
+      where: { [seqField]: inputValue, status: EntityStatus.INACTIVE },
+      include: this.villageChainInclude,
+    });
+    return Promise.all(temples.map((t) => this.serializeTempleDetail(t, user)));
+  }
+
+  // ──────────────── templemain ────────────────
+
+  async getTempleMain(user?: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const MAIN_CATEGORY_IDS = [
+      '742ecf7b-d0b5-11ee-84bd-0242ac110002',
+      '742f645c-d0b5-11ee-84bd-0242ac110002',
+      '74353e76-d0b5-11ee-84bd-0242ac110002',
+      '74344055-d0b5-11ee-84bd-0242ac110002',
+    ];
+
+    const [categories, indianTemplesRaw, globalTemplesRaw] = await Promise.all([
+      this.templeCategoryModel.findAll({ where: { id: { [Op.in]: MAIN_CATEGORY_IDS } } }),
+      this.templeModel.findAll({
+        where: { status: EntityStatus.ACTIVE, geoSite: 'Village', objectId: { [Op.ne]: null as any } },
+        limit: 4,
+        include: this.villageChainInclude,
+      }),
+      this.templeModel.findAll({
+        where: {
+          status: EntityStatus.ACTIVE,
+          geoSite: { [Op.notIn]: ['Village', 'State', 'District', 'Block'] },
+        },
+        limit: 4,
+        include: this.villageChainInclude,
+      }),
+    ]);
+
+    const [indianTemples, globalTemples] = await Promise.all([
+      Promise.all(indianTemplesRaw.map((t) => this.serializeTempleDetail(t, user))),
+      Promise.all(globalTemplesRaw.map((t) => this.serializeTempleDetail(t, user))),
+    ]);
+
+    return {
+      temple_categories: categories.map((c) => ({
+        _id: c.id,
+        name: c.name,
+        desc: c.desc ?? null,
+        shortname: c.shortname ?? null,
+        created_at: c.createdAt ?? null,
+        pic: c.pic ?? null,
+        main_category_id: c.mainCategoryId ?? null,
+      })),
+      indian_temples: indianTemples,
+      global_temples: globalTemples,
+    };
+  }
+
+  // ──────────────── templepost (membership-gated create) ────────────────
+
+  async createWithMembershipCheck(
+    payload: Record<string, unknown>,
+    user?: Record<string, unknown>,
+  ): Promise<{ status: number; body: Record<string, unknown> }> {
+    const userId =
+      typeof payload.user === 'string' ? payload.user
+      : typeof payload.user_id === 'string' ? payload.user_id
+      : undefined;
+
+    if (!userId) {
+      return { status: 400, body: { message: 'User ID is required.' } };
+    }
+
+    const register = await this.userModel.findByPk(userId);
+    if (!register) {
+      return { status: 404, body: { message: 'User not found. Please register.' } };
+    }
+
+    if ((register as any).isMember === 'NO') {
+      return { status: 400, body: { message: "You're not a member. Please register as a member." } };
+    }
+
+    return this.create(payload, user);
   }
 }

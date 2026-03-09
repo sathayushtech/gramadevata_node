@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
+import { literal } from 'sequelize';
 import { TempleFacilities } from './temple-facilities.model';
 import { EntityStatus } from '../../common/enums';
 
@@ -53,7 +54,14 @@ export class TempleFacilitiesService {
       else if (key === 'user_id') where.userId = value;
     }
 
-    const records = await this.facilitiesModel.findAll({ where, order: [['createdAt', 'DESC']] });
+    const records = await this.facilitiesModel.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      attributes: {
+        exclude: ['physicalDisabilitiesServices'],
+        include: [[literal('`physical_disabilities_services(wheelchair)`'), 'physicalDisabilitiesServices']],
+      },
+    });
     return records.map((r) => this.toDto(r));
   }
 

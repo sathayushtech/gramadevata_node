@@ -287,7 +287,7 @@ export class BloodBankService {
 		const newImages = this.parseList(payload.image_location ?? payload.imageLocation);
 		const newMapLocations = this.cleanMapLocation(payload.map_location ?? payload.mapLocation);
 
-		const oldDesc = typeof bloodBank.desc === 'string' ? bloodBank.desc : '';
+		const oldDesc = '';
 		const oldImages = this.normalizeListValue(bloodBank.imageLocation);
 		const oldMapLocations = this.cleanMapLocation(bloodBank.mapLocation);
 
@@ -312,7 +312,6 @@ export class BloodBankService {
 		const mergedImages = this.mergeUnique([...oldImages, ...detailImages, ...newImages]);
 		const mergedMapLocations = this.cleanMapLocation([...oldMapLocations, ...newMapLocations]);
 
-		bloodBank.desc = mergedDesc || undefined;
 		bloodBank.imageLocation = this.storeList(mergedImages) ?? undefined;
 		bloodBank.mapLocation = mergedMapLocations.length ? JSON.stringify(mergedMapLocations) : undefined;
 		bloodBank.status = 'ACTIVE';
@@ -419,7 +418,6 @@ export class BloodBankService {
 				: typeof payload.mapLocation === 'string'
 					? payload.mapLocation
 					: null,
-			desc: typeof payload.desc === 'string' ? payload.desc : null,
 			templeId: typeof payload.temple_id === 'string'
 				? payload.temple_id
 				: typeof payload.templeId === 'string'
@@ -490,10 +488,6 @@ export class BloodBankService {
 			updateData.mapLocation = payload.map_location;
 		} else if (Object.prototype.hasOwnProperty.call(payload, 'mapLocation') && typeof payload.mapLocation === 'string') {
 			updateData.mapLocation = payload.mapLocation;
-		}
-
-		if (Object.prototype.hasOwnProperty.call(payload, 'desc') && typeof payload.desc === 'string') {
-			updateData.desc = payload.desc;
 		}
 
 		if (Object.prototype.hasOwnProperty.call(payload, 'temple_id') && typeof payload.temple_id === 'string') {
@@ -670,7 +664,6 @@ export class BloodBankService {
 			address: record.address ?? null,
 			blood_group: record.bloodGroup ?? null,
 			map_location: record.mapLocation ?? null,
-			desc: record.desc ?? null,
 			temple_id: record.templeId ?? null,
 			village_id: record.villageId ?? null,
 			user_id: record.userId ?? null,

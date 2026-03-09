@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
-import { Op } from 'sequelize';
+import { Op, literal } from 'sequelize';
 import { Temple } from './temple.model';
 import { Event } from '../events/event.model';
 import { Goshala } from '../goshalas/goshala.model';
@@ -140,7 +140,13 @@ export class CityTemplesService {
     ] = await Promise.all([
       this.eventModel.findAll({ where: { templeId: { [Op.in]: allTempleIds }, status: 'ACTIVE' } }),
       this.goshalaModel.findAll({ where: { temple: { [Op.in]: allTempleIds }, status: 'ACTIVE' } }),
-      this.facilitiesModel.findAll({ where: { templeId: { [Op.in]: allTempleIds }, status: 'ACTIVE' } }),
+      this.facilitiesModel.findAll({
+        where: { templeId: { [Op.in]: allTempleIds }, status: 'ACTIVE' },
+        attributes: {
+          exclude: ['physicalDisabilitiesServices'],
+          include: [[literal('`physical_disabilities_services(wheelchair)`'), 'physicalDisabilitiesServices']],
+        },
+      }),
       this.tourGuideModel.findAll({
         where: {
           status: 'ACTIVE',

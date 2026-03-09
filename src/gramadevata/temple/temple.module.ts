@@ -69,6 +69,17 @@ import { SocialActivityController } from './social-activity.controller';
 import { SocialActivityService } from './social-activity.service';
 import { PrayersAndBenefitsController } from './prayers-and-benefits.controller';
 import { PrayersAndBenefitsService } from './prayers-and-benefits.service';
+import { TempleSearchController } from './temple-search.controller';
+import { TempleSearchService } from './temple-search.service';
+import { TempleMergeController } from './temple-merge.controller';
+import { TempleMergeService } from './temple-merge.service';
+import { StateTemplesController } from './statetemples.controller';
+import { StateTemplesService } from './statetemples.service';
+import { TownTemplesController } from './towntemples.controller';
+import { TownTemplesService } from './towntemples.service';
+import { Media } from '../media/media.model';
+import { PoojaStore } from '../pooja-store/pooja-store.model';
+import { AddMoreHotel } from '../hotel/add-hotel.model';
 
 @Module({
   imports: [
@@ -108,6 +119,9 @@ import { PrayersAndBenefitsService } from './prayers-and-benefits.service';
       Connect,
       TemplePoojaTiming,
       PrayersAndBenefits,
+      Media,
+      PoojaStore,
+      AddMoreHotel,
     ]),
   ],
   controllers: [
@@ -128,6 +142,10 @@ import { PrayersAndBenefitsService } from './prayers-and-benefits.service';
     TemplePoojaTimingController,
     SocialActivityController,
     PrayersAndBenefitsController,
+    TempleSearchController,
+    TempleMergeController,
+    StateTemplesController,
+    TownTemplesController,
   ],
   providers: [
     AddTempleDetailsService,
@@ -147,6 +165,10 @@ import { PrayersAndBenefitsService } from './prayers-and-benefits.service';
     TemplePoojaTimingService,
     SocialActivityService,
     PrayersAndBenefitsService,
+    TempleSearchService,
+    TempleMergeService,
+    StateTemplesService,
+    TownTemplesService,
   ],
 })
 export class TempleModule {}

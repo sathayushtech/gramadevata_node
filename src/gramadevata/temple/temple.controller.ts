@@ -97,4 +97,44 @@ export class TempleController {
       throw new HttpException({ message: e instanceof Error ? e.message : String(e) }, 400);
     }
   }
+
+  @Get('temple_inactive')
+  async listInactive(@Query() query: Record<string, string | undefined>): Promise<any> {
+    return this.service.listInactive('/gramadevata/temple_inactive', query);
+  }
+
+  @Get('temple_inactive_get/:fieldName/:inputValue')
+  async getInactiveByField(
+    @Param('fieldName') fieldName: string,
+    @Param('inputValue') inputValue: string,
+    @Req() req: { user?: Record<string, unknown> },
+  ): Promise<any> {
+    return this.service.getInactiveByField(fieldName, inputValue, req.user);
+  }
+
+  @Get('templedetail/:id')
+  async templeDetail(@Param('id') id: string, @Req() req: { user?: Record<string, unknown> }): Promise<any> {
+    const temple = await this.service.getById(id, req.user);
+    if (!temple) {
+      throw new NotFoundException({ message: 'Object not found', status: 404 });
+    }
+    return temple;
+  }
+
+  @Get('templemain')
+  async templeMain(@Req() req: { user?: Record<string, unknown> }): Promise<any> {
+    return this.service.getTempleMain(req.user);
+  }
+
+  @Post('templepost')
+  async createWithMembershipCheck(
+    @Body() payload: Record<string, unknown>,
+    @Req() req: { user?: Record<string, unknown> },
+  ): Promise<any> {
+    const result = await this.service.createWithMembershipCheck(payload, req.user);
+    if (result.status >= 400) {
+      throw new HttpException(result.body, result.status);
+    }
+    return result.body;
+  }
 }
