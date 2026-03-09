@@ -233,60 +233,60 @@
 ### 1. Auth / SSO / Token (2 endpoints)
 | Method | Django Endpoint | Node Status |
 |--------|----------------|-------------|
-| GET | /sso_login | ❌ Pending |
-| POST | /token/refresh | ❌ Pending |
+| GET | /sso_login | ✅ |
+| POST | /token/refresh | ✅ |
 
 ### 2. Events — Missing Endpoints (3 endpoints)
 | Method | Django Endpoint | Node Status |
 |--------|----------------|-------------|
-| GET | /InactivelocationByEvents | ❌ Pending |
-| GET | /locationByEvents/ | ❌ Pending |
-| GET | /indiaevents | ❌ Pending |
+| GET | /InactivelocationByEvents | ✅ |
+| GET | /locationByEvents/ | ✅ |
+| GET | /indiaevents | ✅ |
 
 ### 3. Goshala — Missing Endpoints (2 endpoints)
 | Method | Django Endpoint | Node Status |
 |--------|----------------|-------------|
-| GET | /InactivelocationByGoshalas | ❌ Pending |
-| GET | /locationByGoshalas/ | ❌ Pending |
+| GET | /InactivelocationByGoshalas | ✅ |
+| GET | /locationByGoshalas/ | ✅ |
 
 ### 4. Village — Missing Endpoints (2 endpoints)
 | Method | Django Endpoint | Node Status |
 |--------|----------------|-------------|
-| GET | /villages_by_location | ❌ Pending |
-| PUT | /mergevillage/{village_id}/ | ❌ Pending |
+| GET | /villages_by_location | ✅ |
+| PUT | /mergevillage/{village_id}/ | ✅ |
 
 ### 5. Blood Bank — Missing Endpoint (1 endpoint)
 | Method | Django Endpoint | Node Status |
 |--------|----------------|-------------|
-| PATCH | /blood_bank/{_id} | ❌ Pending |
+| PATCH | /blood_bank/{_id} | ✅ |
 
 ### 6. Comment — Missing Endpoint (1 endpoint)
 | Method | Django Endpoint | Node Status |
 |--------|----------------|-------------|
-| PATCH | /comment/{_id} | ❌ Pending |
+| PATCH | /comment/{_id} | ✅ |
 
 ### 7. Country — Missing Endpoint (1 endpoint)
 | Method | Django Endpoint | Node Status |
 |--------|----------------|-------------|
-| GET | /country/{_id} | ❌ Pending |
+| GET | /country/{_id} | ❌ Pending | -- Did not find
 
 ### 8. Hospital — Missing Endpoints (2 endpoints)
 | Method | Django Endpoint | Node Status |
 |--------|----------------|-------------|
-| GET | /hospitals_by_location | ❌ Pending |
-| PUT | /nearby_hospital_merge/{hospital_id} | ❌ Pending |
+| GET | /hospitals_by_location | ✅ |
+| PUT | /nearby_hospital_merge/{hospital_id} | ✅ |
 
 ### 9. Restaurant — Missing Endpoints (2 endpoints)
 | Method | Django Endpoint | Node Status |
 |--------|----------------|-------------|
-| GET | /restaurants_by_location | ❌ Pending |
-| PUT | /restaurant_merge/{restaurant_id} | ❌ Pending |
+| GET | /restaurants_by_location | ✅ |
+| PUT | /restaurant_merge/{restaurant_id} | ✅ |
 
 ### 10. Pooja Store — Missing Endpoints (2 endpoints)
 | Method | Django Endpoint | Node Status |
 |--------|----------------|-------------|
-| GET | /pooja_stores_by_location | ❌ Pending |
-| PUT | /pooja_store_merge/{pooja_store_id} | ❌ Pending |
+| GET | /pooja_stores_by_location | ✅ |
+| PUT | /pooja_store_merge/{pooja_store_id} | ✅ |
 
 ### 11. Share (2 endpoints)
 | Method | Django Endpoint | Node Status |
