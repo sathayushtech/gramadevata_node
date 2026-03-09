@@ -1,5 +1,6 @@
-import { Column, DataType, Model, Table } from 'sequelize-typescript';
+import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
 import { EntityStatus } from '../../common/enums';
+import { Village } from '../villages/village.model';
 
 @Table({ tableName: 'nearby_hospitals', timestamps: false })
 export class NearbyHospital extends Model<NearbyHospital> {
@@ -26,6 +27,10 @@ export class NearbyHospital extends Model<NearbyHospital> {
 
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'village_id' })
   declare villageId?: string;
+
+  @ForeignKey(() => Village)
+  @BelongsTo(() => Village, { foreignKey: 'villageId', onDelete: 'SET NULL' })
+  declare village?: Village;
 
   @Column({ type: DataType.STRING(45), allowNull: true, field: 'user_id' })
   declare userId?: string;

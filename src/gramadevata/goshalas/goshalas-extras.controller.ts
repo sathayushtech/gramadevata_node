@@ -61,4 +61,32 @@ export class GoshalasExtrasController {
 		}
 		return result.body;
 	}
+
+	@Get('locationByGoshalas')
+	@ApiTags('locationByGoshalas')
+	async getByLocation(
+		@Query() query: Record<string, string | undefined>,
+		@Req() req: { protocol?: string; get?: (name: string) => string | undefined; path?: string; originalUrl?: string }
+	) {
+		const basePath = req.originalUrl ? req.originalUrl.split('?')[0] : req.path ?? '';
+		const host = req.get?.('host');
+		const protocol = req.protocol ?? 'http';
+		const baseUrl = host ? `${protocol}://${host}${basePath}` : basePath;
+
+		return this.goshalaService.getByLocation(query, baseUrl);
+	}
+
+	@Get('InactivelocationByGoshalas')
+	@ApiTags('InactivelocationByGoshalas')
+	async getInactiveByLocation(
+		@Query() query: Record<string, string | undefined>,
+		@Req() req: { protocol?: string; get?: (name: string) => string | undefined; path?: string; originalUrl?: string }
+	) {
+		const basePath = req.originalUrl ? req.originalUrl.split('?')[0] : req.path ?? '';
+		const host = req.get?.('host');
+		const protocol = req.protocol ?? 'http';
+		const baseUrl = host ? `${protocol}://${host}${basePath}` : basePath;
+
+		return this.goshalaService.getInactiveByLocation(query, baseUrl);
+	}
 }

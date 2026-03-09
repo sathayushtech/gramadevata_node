@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Put,
+  Patch,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -43,6 +44,16 @@ export class CommentsController {
   @Put(':id')
   @UseGuards(JwtAuthGuard)
   async update(@Param('id') id: string, @Body() payload: Record<string, unknown>) {
+    const comment = await this.commentsService.update(id, payload);
+    if (!comment) {
+      throw new NotFoundException('Comment not found.');
+    }
+    return comment;
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  async updatePartial(@Param('id') id: string, @Body() payload: Record<string, unknown>) {
     const comment = await this.commentsService.update(id, payload);
     if (!comment) {
       throw new NotFoundException('Comment not found.');

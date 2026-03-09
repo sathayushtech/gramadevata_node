@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
@@ -320,6 +320,193 @@ export class GoshalaService {
 		}
 
 		return { status: 200, body: results };
+	}
+
+	async getByLocation(
+		query: Record<string, string | undefined>,
+		baseUrl?: string
+	): Promise<Record<string, unknown>> {
+		const inputValue = query.input_value;
+		const category = query.category;
+		if (!inputValue && !category) {
+			throw new BadRequestException('Input value or category is required');
+		}
+
+		const page = this.normalizePage(query.page ?? query.page_no);
+		const pageSize = this.normalizePageSize(query.page_size ?? query.pageSize);
+		const offset = (page - 1) * pageSize;
+
+		let locationWhere = this.buildLocationWhere(inputValue, category);
+		const hasMatch = await this.goshalaModel.findOne({ where: locationWhere, include: this.getLocationInclude() });
+		if (!hasMatch && inputValue) {
+			locationWhere = this.buildFallbackWhere(inputValue, category);
+		}
+
+		const { count, rows } = await this.goshalaModel.findAndCountAll({
+			where: { ...locationWhere, status: 'ACTIVE' },
+			include: this.getLocationInclude(),
+			limit: pageSize,
+			offset,
+		});
+
+		const results = rows.map((record) => this.toGoshalaLocationResponse(record));
+
+		return this.buildPaginatedResponse({
+			count,
+			page,
+			pageSize,
+			results,
+			baseUrl,
+			query,
+		});
+	}
+
+	async getInactiveByLocation(
+		query: Record<string, string | undefined>,
+		baseUrl?: string
+	): Promise<Record<string, unknown>> {
+		const inputValue = query.input_value;
+		const category = query.category;
+		if (!inputValue && !category) {
+			throw new BadRequestException('Input value or category is required');
+		}
+
+		const page = this.normalizePage(query.page ?? query.page_no);
+		const pageSize = this.normalizePageSize(query.page_size ?? query.pageSize);
+		const offset = (page - 1) * pageSize;
+
+		let locationWhere = this.buildLocationWhere(inputValue, category);
+		const hasMatch = await this.goshalaModel.findOne({ where: locationWhere, include: this.getLocationInclude() });
+		if (!hasMatch && inputValue) {
+			locationWhere = this.buildFallbackWhere(inputValue, category);
+		}
+
+		const { count, rows } = await this.goshalaModel.findAndCountAll({
+			where: { ...locationWhere, status: 'INACTIVE' },
+			include: this.getLocationInclude(),
+			limit: pageSize,
+			offset,
+		});
+
+		const results = [] as Record<string, unknown>[];
+		for (const record of rows) {
+			results.push(await this.toGoshalaResponse(record));
+		}
+
+		return this.buildPaginatedResponse({
+			count,
+			page,
+			pageSize,
+			results,
+			baseUrl,
+			query,
+		});
+	}
+
+  private toGoshalaLocationResponse(record: Goshala) {
+		const plain = record.get({ plain: true }) as Goshala & { village?: Village };
+		const baseUrl = this.getBaseUrl();
+
+		return {
+			_id: plain.id,
+			name: plain.name ?? null,
+			image_location: this.mapFileList(plain.imageLocation, baseUrl),
+			address: plain.address ?? null,
+			object_id: this.buildObjectId(plain.village),
+		};
+	}
+
+  private buildLocationWhere(inputValue?: string, category?: string) {
+		const where: Record<string, unknown> & { [Op.or]?: unknown } = {};
+		if (category) {
+			where.category = category;
+		}
+		if (inputValue) {
+			where[Op.or] = [
+				{ '$village.block.district.state.country.id$': inputValue },
+				{ '$village.block.district.state.id$': inputValue },
+				{ '$village.block.district.id$': inputValue },
+				{ '$village.block.id$': inputValue },
+				{ '$village.id$': inputValue },
+			];
+		}
+		return where;
+	}
+
+	private buildFallbackWhere(inputValue?: string, category?: string) {
+		const where: Record<string, unknown> = {};
+		if (inputValue) {
+			where.objectId = inputValue;
+		}
+		if (category) {
+			where.category = category;
+		}
+		return where;
+	}
+
+	private buildPaginatedResponse(params: {
+		count: number;
+		page: number;
+		pageSize: number;
+		results: Record<string, unknown>[];
+		baseUrl?: string;
+		query: Record<string, string | undefined>;
+	}) {
+		const { count, page, pageSize, results, baseUrl, query } = params;
+		const totalPages = Math.ceil(count / pageSize) || 1;
+
+		const nextPage = page < totalPages ? page + 1 : null;
+		const prevPage = page > 1 ? page - 1 : null;
+
+		const next = nextPage ? this.buildPageLink(baseUrl, query, nextPage, pageSize) : null;
+		const previous = prevPage ? this.buildPageLink(baseUrl, query, prevPage, pageSize) : null;
+
+		return {
+			count,
+			next,
+			previous,
+			results,
+		};
+	}
+
+	private buildPageLink(
+		baseUrl: string | undefined,
+		query: Record<string, string | undefined>,
+		page: number,
+		pageSize: number
+	) {
+		if (!baseUrl) {
+			return page;
+		}
+
+		const params = new URLSearchParams();
+		Object.entries(query).forEach(([key, value]) => {
+			if (value === undefined || value === null || value === '') {
+				return;
+			}
+			if (key === 'page' || key === 'page_no') {
+				return;
+			}
+			params.set(key, value);
+		});
+
+		params.set('page', String(page));
+		params.set('page_size', String(pageSize));
+
+		return `${baseUrl}?${params.toString()}`;
+	}
+
+	private normalizePage(value?: string) {
+		const page = Number.parseInt(value ?? '1', 10);
+		return Number.isNaN(page) || page < 1 ? 1 : page;
+	}
+
+	private normalizePageSize(value?: string) {
+		const size = Number.parseInt(value ?? '50', 10);
+		if (Number.isNaN(size) || size < 1) {
+			return 50;
+		}
+		return Math.min(size, 90);
 	}
 
 	private async toInactiveResponses(records: Goshala[]) {

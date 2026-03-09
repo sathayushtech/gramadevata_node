@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Get, Param, NotFoundException } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, Query, NotFoundException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiTags } from '@nestjs/swagger';
 
@@ -24,5 +24,15 @@ export class AuthController {
       throw new NotFoundException('Object not found');
     }
     return profile;
+  }
+
+  @Get('sso_login')
+  async ssoLogin(@Query('token') token?: string) {
+    return this.authService.ssoLogin(token);
+  }
+
+  @Post('token/refresh')
+  async refreshToken(@Body() payload: Record<string, unknown>): Promise<unknown> {
+    return this.authService.refreshToken(payload);
   }
 }

@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { ConfigService } from '@nestjs/config';
 import { Village } from './village.model';
-import { Op, col, fn, where } from 'sequelize';
+import { Op, col, fn, where, literal } from 'sequelize';
 import type { CreationAttributes } from 'sequelize';
 import { EntityStatus, ConnectedAs } from '../../common/enums';
 import { coerceList, formatTimesinceAgo, toDjangoKeys, toFileUrlList, toFirstImageFileUrl, toMapUrlList, toVillageImageUrlList } from './village.serializer';
@@ -28,6 +28,12 @@ import { Country } from '../../common/models/country.model';
 
 @Injectable()
 export class VillagesService {
+
+  private static readonly locationCache = new Map<
+    string,
+    { expiresAt: number; payload: Record<string, unknown> }
+  >();
+  
   constructor(
     @InjectModel(Village)
     private readonly villageModel: typeof Village,
@@ -752,5 +758,230 @@ export class VillagesService {
     if (!village) return false;
     await village.destroy();
     return true;
+  }
+
+  async getByLocation(
+    query: Record<string, string | undefined>,
+    baseUrl?: string
+  ): Promise<Record<string, unknown>> {
+    const inputValue = query.input_value;
+    const search = (query.search ?? '').trim();
+
+    if (!inputValue) {
+      throw new BadRequestException('input_value is required');
+    }
+
+    const cacheKey = this.buildCacheKey(baseUrl, query);
+    const cached = VillagesService.locationCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.payload;
+    }
+
+    const page = this.normalizePage(query.page ?? query.page_no);
+    const pageSize = 20;
+    const offset = (page - 1) * pageSize;
+
+    const where: Record<string, unknown> & { [Op.or]?: unknown; [Op.and]?: unknown } = {
+      status: 'ACTIVE',
+      [Op.or]: [
+        { '$block.district.state.country.id$': inputValue },
+        { '$block.district.state.id$': inputValue },
+        { '$block.district.id$': inputValue },
+        { '$block.id$': inputValue },
+      ],
+    };
+
+    if (search) {
+      if (search.length >= 4) {
+        where[Op.and] = [
+          literal(`MATCH(village.name) AGAINST ('${search.replace(/'/g, "''")}*' IN BOOLEAN MODE)`),
+        ];
+      } else {
+        where.name = { [Op.like]: `%${search}%` };
+      }
+    }
+
+    const { count, rows } = await this.villageModel.findAndCountAll({
+      where,
+      include: this.getLocationInclude(),
+      attributes: ['id', 'name', 'imageLocation', 'blockId', 'precedence'],
+      order: [
+        [literal('CASE WHEN precedence IS NULL OR precedence = 0 THEN 9999 ELSE precedence END'), 'ASC'],
+        ['name', 'ASC'],
+      ],
+      limit: pageSize,
+      offset,
+    });
+
+    const results = rows.map((village) => this.toLocationResponse(village));
+
+    const response = this.buildFastPaginationResponse({
+      count,
+      page,
+      pageSize,
+      results,
+      baseUrl,
+      query,
+    });
+
+    VillagesService.locationCache.set(cacheKey, {
+      expiresAt: Date.now() + 600 * 1000,
+      payload: response,
+    });
+
+    return response;
+  }
+
+  private getLocationInclude() {
+    return [
+      {
+        model: Block,
+        required: true,
+        include: [
+          {
+            model: District,
+            required: true,
+            include: [
+              {
+                model: State,
+                required: true,
+                include: [{ model: Country, required: true }],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+  }
+
+  private toLocationResponse(village: Village) {
+    const plain = village.get({ plain: true }) as Village & { block?: Block };
+    const block = plain.block as Block | undefined;
+    const district = block?.district as District | undefined;
+    const state = district?.state as State | undefined;
+    const country = state?.country as Country | undefined;
+
+    return {
+      _id: plain.id,
+      name: plain.name ?? null,
+      image_location: this.mapFileList(plain.imageLocation),
+      location_hierarchy: block && district && state && country
+        ? {
+            village_id: plain.id,
+            village_name: plain.name ?? null,
+            block: {
+              block_id: block.id,
+              block_name: block.name,
+              district: {
+                district_id: district.id,
+                district_name: district.name,
+                state: {
+                  state_id: state.id,
+                  state_name: state.name,
+                  country: {
+                    country_id: country.id,
+                    country_name: country.name,
+                  },
+                },
+              },
+            },
+          }
+        : null,
+    };
+  }
+
+  private mapFileList(raw: unknown) {
+    const list = this.parseList(raw);
+    const base = this.configService.get<string>('File_path')
+      || this.configService.get<string>('FILE_URL')
+      || '';
+    if (!base) {
+      return list;
+    }
+    const trimmed = base.endsWith('/') ? base : `${base}/`;
+    return list.map((path) => `${trimmed}${path.replace(/^\/+/, '')}`);
+  }
+
+  private parseList(raw: unknown): string[] {
+    if (!raw) {
+      return [];
+    }
+
+    if (Array.isArray(raw)) {
+      return raw.map((item) => String(item).trim()).filter(Boolean);
+    }
+
+    if (typeof raw === 'string') {
+      return raw
+        .replace(/\[|\]/g, '')
+        .split(',')
+        .map((item) => item.replace(/['\"]+/g, '').trim())
+        .filter(Boolean);
+    }
+
+    return [];
+  }
+
+  private buildFastPaginationResponse(params: {
+    count: number;
+    page: number;
+    pageSize: number;
+    results: Record<string, unknown>[];
+    baseUrl?: string;
+    query: Record<string, string | undefined>;
+  }) {
+    const { count, page, pageSize, results, baseUrl, query } = params;
+    const totalPages = Math.ceil(count / pageSize) || 1;
+    const nextPage = page < totalPages ? page + 1 : null;
+    const prevPage = page > 1 ? page - 1 : null;
+
+    const next = nextPage ? this.buildPageLink(baseUrl, query, nextPage) : null;
+    const previous = prevPage ? this.buildPageLink(baseUrl, query, prevPage) : null;
+
+    return {
+      next,
+      previous,
+      results,
+    };
+  }
+
+  private buildPageLink(
+    baseUrl: string | undefined,
+    query: Record<string, string | undefined>,
+    page: number
+  ) {
+    if (!baseUrl) {
+      return page;
+    }
+
+    const params = new URLSearchParams();
+    Object.entries(query).forEach(([key, value]) => {
+      if (!value) {
+        return;
+      }
+      if (key === 'page' || key === 'page_no') {
+        return;
+      }
+      params.set(key, value);
+    });
+
+    params.set('page', String(page));
+    return `${baseUrl}?${params.toString()}`;
+  }
+
+  private normalizePage(value?: string) {
+    const page = Number.parseInt(value ?? '1', 10);
+    return Number.isNaN(page) || page < 1 ? 1 : page;
+  }
+
+  private buildCacheKey(baseUrl: string | undefined, query: Record<string, string | undefined>) {
+    const params = new URLSearchParams();
+    Object.entries(query).forEach(([key, value]) => {
+      if (!value) {
+        return;
+      }
+      params.set(key, value);
+    });
+    return `${baseUrl ?? 'villages_by_location'}?${params.toString()}`;
   }
 }

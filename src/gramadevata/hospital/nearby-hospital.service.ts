@@ -1,9 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
 import type { CreationAttributes, WhereOptions } from 'sequelize';
 import { Op } from 'sequelize';
 import { NearbyHospital } from './nearby-hospital.model';
+import { Village } from '../villages/village.model';
+import { Block } from '../block/block.model';
+import { District } from '../../common/models/district.model';
+import { State } from '../../common/models/state.model';
+import { Country } from '../../common/models/country.model';
+
 import * as GramadevataUtils from '../../common/utils/gramadevata.utils';
 
 type ServiceResult = {
@@ -145,6 +151,166 @@ export class NearbyHospitalService {
 
 		await record.destroy();
 		return true;
+	}
+
+	async getByLocation(query: Record<string, string | undefined>) {
+		const inputValue = query.input_value;
+		if (!inputValue) {
+			throw new BadRequestException('input_value is required');
+		}
+
+		const searchQuery = (query.search ?? '').trim();
+		const where: Record<string, unknown> & { [Op.and]?: unknown[]; [Op.or]?: unknown } = {
+			status: 'ACTIVE',
+			[Op.or]: [
+				{ '$village.block.district.state.country.id$': inputValue },
+				{ '$village.block.district.state.id$': inputValue },
+				{ '$village.block.district.id$': inputValue },
+				{ '$village.block.id$': inputValue },
+				{ '$village.id$': inputValue },
+			],
+		};
+
+		if (searchQuery) {
+			where[Op.and] = [
+				{
+					[Op.or]: [
+						{ name: { [Op.like]: `%${searchQuery}%` } },
+						{ address: { [Op.like]: `%${searchQuery}%` } },
+					],
+				},
+			];
+		}
+
+		let hospitals = await this.nearbyHospitalModel.findAll({
+			where,
+			include: this.getLocationInclude(),
+		});
+
+		if (!hospitals.length) {
+			const fallbackWhere: Record<string, unknown> & { [Op.or]?: unknown } = {
+				villageId: inputValue,
+				status: 'ACTIVE',
+			};
+			if (searchQuery) {
+				fallbackWhere[Op.or] = [
+					{ name: { [Op.like]: `%${searchQuery}%` } },
+					{ address: { [Op.like]: `%${searchQuery}%` } },
+				];
+			}
+			hospitals = await this.nearbyHospitalModel.findAll({
+				where: fallbackWhere,
+				include: this.getLocationInclude(),
+			});
+		}
+
+		return {
+			nearby_hospitals: hospitals.map((hospital) => this.toLocationResponse(hospital)),
+		};
+	}
+
+	private toLocationResponse(record: NearbyHospital): Record<string, unknown> {
+		const baseUrl = this.getBaseUrl();
+		const village = record.village as Village | undefined;
+		return {
+			_id: record.id,
+			name: record.name ?? null,
+			image_location: this.mapFileList(record.imageLocation, baseUrl),
+			map_location: this.parseMapLocation(record.mapLocation),
+			address: record.address ?? null,
+			village_id: this.buildVillageHierarchy(village),
+		};
+	}
+
+	private parseMapLocation(raw: unknown) {
+		if (!raw) {
+			return [];
+		}
+		if (Array.isArray(raw)) {
+			return raw;
+		}
+		if (typeof raw === 'string') {
+			const trimmed = raw.trim();
+			if (!trimmed) {
+				return [];
+			}
+			if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+				try {
+					const parsed = JSON.parse(trimmed);
+					return Array.isArray(parsed) ? parsed : [trimmed];
+				} catch {
+					return [trimmed];
+				}
+			}
+			return [trimmed];
+		}
+		return [];
+	}
+
+	private buildVillageHierarchy(village?: Village | null) {
+		if (!village) {
+			return null;
+		}
+		const block = village.block as Block | undefined;
+		const district = block?.district as District | undefined;
+		const state = district?.state as State | undefined;
+		const country = state?.country as Country | undefined;
+
+		if (!block || !district || !state || !country) {
+			return {
+				_id: village.id,
+				name: village.name,
+			};
+		}
+
+		return {
+			_id: village.id,
+			name: village.name,
+			block: {
+				block_id: block.id,
+				name: block.name,
+				district: {
+					district_id: district.id,
+					name: district.name,
+					state: {
+						state_id: state.id,
+						name: state.name,
+						country: {
+							country_id: country.id,
+							name: country.name,
+						},
+					},
+				},
+			},
+		};
+	}
+
+	private getLocationInclude() {
+		return [
+			{
+				model: Village,
+				required: false,
+				include: [
+					{
+						model: Block,
+						required: false,
+						include: [
+							{
+								model: District,
+								required: false,
+								include: [
+									{
+										model: State,
+										required: false,
+										include: [{ model: Country, required: false }],
+									},
+								],
+							},
+						],
+					},
+				],
+			},
+		];
 	}
 
 	private buildFilters(query: Record<string, string | undefined>): WhereOptions<NearbyHospital> {

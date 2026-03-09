@@ -7,6 +7,9 @@ import { AddRestaurantDetailsService } from './add-restaurant-details.service';
 import { RestaurantsController } from './restaurants.controller';
 import { RestaurantsService } from './restaurants.service';
 import { TempleNearbyRestaurant } from '../events/temple-nearby-restaurant.model';
+import { RestaurantMergeController } from './restaurant-merge.controller';
+import { RestaurantMergeService } from './restaurant-merge.service';
+import { RestaurantsByLocationController } from './restaurants-by-location.controller';
 
 @Module({
   imports: [
@@ -16,7 +19,9 @@ import { TempleNearbyRestaurant } from '../events/temple-nearby-restaurant.model
       TempleNearbyRestaurant,
     ]),
   ],
-  controllers: [AddRestaurantDetailsController, RestaurantsController],
-  providers: [AddRestaurantDetailsService, RestaurantsService],
+  controllers: [AddRestaurantDetailsController, RestaurantsController, RestaurantMergeController, 
+    RestaurantsByLocationController
+  ],
+  providers: [AddRestaurantDetailsService, RestaurantsService, RestaurantMergeService],
 })
 export class RestaurantModule {}

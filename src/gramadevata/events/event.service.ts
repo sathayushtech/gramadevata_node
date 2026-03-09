@@ -575,6 +575,94 @@ export class EventService {
     };
   }
 
+  async getByLocation(
+    inputValue?: string,
+    category?: string
+  ): Promise<{
+    status: number;
+    event_upcoming: Record<string, unknown>[];
+    event_completed: Record<string, unknown>[];
+    event_ongoing: Record<string, unknown>[];
+  }> {
+    if (!inputValue && !category) {
+      throw new BadRequestException('At least one of input_value or category must be provided.');
+    }
+
+    const include = this.getLocationInclude();
+    const order = this.getEventOrder();
+
+    let events = await this.eventModel.findAll({
+      where: this.buildLocationWhere(inputValue, category),
+      include,
+      order,
+    });
+
+    if (!events.length && inputValue) {
+      events = await this.eventModel.findAll({
+        where: this.buildFallbackWhere(inputValue, category),
+        include,
+        order,
+      });
+    }
+
+    const active = events.filter((event) => event.status === 'ACTIVE');
+    const mapped = active.map((event) => this.toEventLocationResponse(event));
+
+    return {
+      status: 200,
+      event_upcoming: mapped.filter((event) => event.event_status === 'UPCOMING'),
+      event_completed: mapped.filter((event) => event.event_status === 'COMPLETED'),
+      event_ongoing: mapped.filter((event) => event.event_status === 'ONGOING'),
+    };
+  }
+
+  private toEventLocationResponse(event: Event) {
+    const plain = event.get({ plain: true }) as Event;
+    const rawBaseUrl = this.configService.get<string>('File_path') || '';
+    const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+
+    return {
+      _id: plain.id,
+      name: plain.name ?? null,
+      image_location: this.mapFileList(plain.imageLocation, baseUrl),
+      address: plain.address ?? null,
+      start_date: plain.startDate ?? null,
+      end_date: plain.endDate ?? null,
+      event_status: plain.eventStatus ?? null,
+    };
+  }
+
+  async listIndianEvents(
+    query: Record<string, string | undefined>,
+    baseUrl?: string
+  ): Promise<Record<string, unknown>> {
+    const page = this.normalizePage(query.page ?? query.page_no);
+    const pageSize = this.normalizePageSize(query.page_size ?? query.pageSize);
+    const offset = (page - 1) * pageSize;
+
+    const villages = await this.villageModel.findAll({ attributes: ['id'] });
+    const villageIds = villages.map((village: Village) => village.id);
+
+    const { count, rows } = await this.eventModel.findAndCountAll({
+      where: villageIds.length ? { objectId: { [Op.in]: villageIds } } : {},
+      include: this.getLocationInclude(),
+      order: [['createdAt', 'DESC']],
+      limit: pageSize,
+      offset,
+    });
+
+    const results = await this.enrichEvents(rows);
+
+    return this.buildPaginatedResponse({
+      count,
+      page,
+      pageSize,
+      results,
+      baseUrl,
+      query,
+    });
+  }
+
   async listGlobalEvents(
     query: Record<string, string | undefined>,
     baseUrl?: string

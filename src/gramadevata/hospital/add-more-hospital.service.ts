@@ -5,6 +5,7 @@ import { Op } from 'sequelize';
 import type { CreationAttributes } from 'sequelize';
 import nodemailer from 'nodemailer';
 import { AddMoreHospital } from './add-more-hospital.model';
+import { NearbyHospital } from './nearby-hospital.model';
 import { Register as User } from '../auth/user.model';
 
 type CreateResult = {
@@ -19,6 +20,8 @@ export class AddMoreHospitalService {
     private readonly addMoreHospitalModel: typeof AddMoreHospital,
     @InjectModel(User)
     private readonly userModel: typeof User,
+    @InjectModel(NearbyHospital)
+    private readonly nearbyHospitalModel: typeof NearbyHospital,
     private readonly configService: ConfigService
   ) {}
 
@@ -151,6 +154,165 @@ export class AddMoreHospitalService {
     }
 
     return null;
+  }
+
+  async mergeHospitalDetails(hospitalId: string, payload: Record<string, unknown>) {
+    try {
+      const hospital = await this.nearbyHospitalModel.findByPk(hospitalId);
+      if (!hospital) {
+        return { status: 404, body: { message: 'Hospital not found' } };
+      }
+
+      const newDesc = typeof payload.desc === 'string' ? payload.desc.trim() : '';
+      const newImages = this.parseListField(payload.image_location ?? payload.imageLocation);
+      const newMapLocation = this.cleanMapLocation(payload.map_location ?? payload.mapLocation);
+
+      const oldDesc = '';
+      const oldImages = this.parseListField(hospital.imageLocation);
+      const oldMapLocation = this.cleanMapLocation(hospital.mapLocation);
+
+      const details = await this.addMoreHospitalModel.findAll({ where: { hospitalId } });
+
+      const allDescs: string[] = [];
+      const allImages: string[] = [];
+      const allMapLocations: string[] = [];
+
+      for (const detail of details) {
+        if (detail.desc) {
+          allDescs.push(detail.desc.trim());
+        }
+        allImages.push(...this.parseListField(detail.imageLocation));
+        allMapLocations.push(...this.cleanMapLocation(detail.mapLocation));
+      }
+
+      const mergedDesc = this.uniqueStrings([oldDesc, ...allDescs, newDesc].filter(Boolean)).join(', ');
+      const mergedImages = this.uniqueStrings([...oldImages, ...allImages, ...newImages]);
+      const mergedMapLocation = this.uniqueStrings([
+        ...oldMapLocation,
+        ...allMapLocations,
+        ...newMapLocation,
+      ]);
+
+      hospital.imageLocation = mergedImages as unknown as NearbyHospital['imageLocation'];
+      hospital.mapLocation = JSON.stringify(mergedMapLocation);
+      hospital.status = 'ACTIVE';
+      await hospital.save();
+
+      if (details.length) {
+        await this.addMoreHospitalModel.destroy({ where: { hospitalId } });
+      }
+
+      await this.addMoreHospitalModel.create({
+        hospitalId,
+        desc: mergedDesc,
+        imageLocation: mergedImages,
+        mapLocation: JSON.stringify(mergedMapLocation),
+        status: 'ACTIVE',
+      } as CreationAttributes<AddMoreHospital>);
+
+      const base = (this.configService.get<string>('FILE_URL')
+        || this.configService.get<string>('File_path')
+        || '').replace(/\/+$/, '');
+      const baseUrl = base ? `${base}/` : '';
+
+      return {
+        status: 200,
+        body: {
+          hospital_id: hospital.id,
+          name: hospital.name,
+          desc: mergedDesc,
+          image_location: mergedImages.map((img) => `${baseUrl}${img}`),
+          map_location: mergedMapLocation,
+          status: 'ACTIVE',
+        },
+      };
+    } catch (error) {
+      return {
+        status: 500,
+        body: { message: 'Error occurred', error: error instanceof Error ? error.message : String(error) },
+      };
+    }
+  }
+
+  private parseListField(raw: unknown): string[] {
+    if (Array.isArray(raw)) {
+      return raw.map((item) => String(item).trim()).filter(Boolean);
+    }
+
+    if (!raw) {
+      return [];
+    }
+
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => String(item).trim()).filter(Boolean);
+        }
+      } catch {
+        // ignore
+      }
+
+      return raw
+        .replace(/\[|\]/g, '')
+        .split(',')
+        .map((item) => item.replace(/['\"]+/g, '').trim())
+        .filter(Boolean);
+    }
+
+    return [];
+  }
+
+  private cleanMapLocation(raw: unknown): string[] {
+    const results: string[] = [];
+
+    const ingest = (value: unknown) => {
+      if (!value) {
+        return;
+      }
+      if (Array.isArray(value)) {
+        value.forEach((item) => ingest(item));
+        return;
+      }
+      if (typeof value !== 'string') {
+        return;
+      }
+
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return;
+      }
+
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          ingest(parsed);
+          return;
+        } catch {
+          // ignore
+        }
+      }
+
+      const cleaned = trimmed.replace(/\\/g, '').replace(/^["']+|["']+$/g, '');
+      const match = cleaned.match(/https:\/\/maps\.app\.goo\.gl\/\S+/);
+      if (match) {
+        results.push(match[0]);
+      }
+    };
+
+    ingest(raw);
+
+    return this.uniqueStrings(results);
+  }
+
+  private uniqueStrings(values: string[]) {
+    const unique = new Set<string>();
+    values.forEach((value) => {
+      if (value) {
+        unique.add(value);
+      }
+    });
+    return Array.from(unique);
   }
 
   private buildCreatePayload(payload: Record<string, unknown>, fallbackUserId: string) {

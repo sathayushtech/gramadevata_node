@@ -258,6 +258,134 @@ export class AddVillageDetailsService {
     return null;
   }
 
+  async mergeVillageDetails(villageId: string, payload: Record<string, unknown>): Promise<{ status: number; body: Record<string, unknown> }> {
+    try {
+      const village = await this.villageModel.findByPk(villageId);
+      if (!village) {
+        return { status: 404, body: { message: 'Village not found' } };
+      }
+
+      const newDesc = typeof payload.desc === 'string' ? payload.desc : '';
+      const newImages = this.parseImages(payload.image_location ?? payload.imageLocation);
+      const newMapUrls = this.parseListField(payload.mapUrl ?? payload.map_location ?? payload.mapLocation);
+      const newVideos = this.parseListField(payload.village_video ?? payload.villageVideo);
+
+      const oldDesc = typeof village.desc === 'string' ? village.desc : '';
+      const oldImages = this.parseImages(village.imageLocation);
+      const oldMapUrls = this.parseListField(village.mapUrl);
+      const oldVideos = this.parseListField(village.villageVideo);
+
+      const details = await this.addVillageDetailsModel.findAll({ where: { villageId } });
+
+      const allDescs: string[] = [];
+      const allImages: string[] = [];
+      const allMapUrls: string[] = [];
+      const allVideos: string[] = [];
+
+      for (const detail of details) {
+        if (detail.desc) {
+          allDescs.push(detail.desc.trim());
+        }
+        allImages.push(...this.parseImages(detail.imageLocation));
+        allMapUrls.push(...this.parseListField(detail.mapUrl));
+        allVideos.push(...this.parseListField(detail.villageVideo));
+      }
+
+      const mergedDesc = this.uniqueStrings([oldDesc.trim(), ...allDescs, newDesc.trim()].filter(Boolean)).join(', ');
+      const mergedImages = this.uniqueStrings([...oldImages, ...allImages, ...newImages]);
+      const mergedMapUrls = this.uniqueStrings([...oldMapUrls, ...allMapUrls, ...newMapUrls]);
+      const mergedVideos = this.uniqueStrings([...oldVideos, ...allVideos, ...newVideos]);
+
+      village.desc = mergedDesc;
+      village.imageLocation = mergedImages as unknown as Village['imageLocation'];
+      village.mapUrl = mergedMapUrls.join(',');
+      village.villageVideo = mergedVideos as unknown as Village['villageVideo'];
+      village.status = 'ACTIVE';
+      await village.save();
+
+      if (details.length) {
+        await this.addVillageDetailsModel.destroy({ where: { villageId } });
+      }
+
+      await this.addVillageDetailsModel.create({
+        villageId,
+        desc: mergedDesc,
+        imageLocation: mergedImages,
+        mapUrl: mergedMapUrls.join(','),
+        villageVideo: mergedVideos,
+        status: 'ACTIVE',
+      } as CreationAttributes<AddVillageDetails>);
+
+      const base = (this.configService.get<string>('FILE_URL')
+        || this.configService.get<string>('File_path')
+        || '').replace(/\/+$/, '');
+      const baseUrl = base ? `${base}/` : '';
+
+      return {
+        status: 200,
+        body: {
+          village_id: village.id,
+          name: village.name,
+          desc: mergedDesc,
+          image_location: mergedImages.map((img) => `${baseUrl}${img}`),
+          mapUrl: mergedMapUrls,
+          village_video: mergedVideos.map((vid) => `${baseUrl}${vid}`),
+          status: 'ACTIVE',
+        },
+      };
+    } catch (error) {
+      return {
+        status: 500,
+        body: { message: 'Error occurred', error: error instanceof Error ? error.message : String(error) },
+      };
+    }
+  }
+
+  private parseListField(raw: unknown): string[] {
+    if (Array.isArray(raw)) {
+      return raw.map((item) => String(item).trim()).filter(Boolean);
+    }
+
+    if (!raw) {
+      return [];
+    }
+
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => String(item).trim()).filter(Boolean);
+        }
+      } catch {
+        // ignore
+      }
+
+      return raw
+        .replace(/\[|\]/g, '')
+        .split(',')
+        .map((item) => item.replace(/['\"]+/g, '').trim())
+        .filter(Boolean);
+    }
+
+    return [];
+  }
+
+  private parseImages(raw: unknown): string[] {
+    return this.parseListField(raw)
+      .map((img) => img.replace(/\\/g, '/').replace(/^\/+/, ''))
+      .filter(Boolean);
+  }
+
+  private uniqueStrings(values: string[]) {
+    const unique = new Set<string>();
+    values.forEach((value) => {
+      if (value) {
+        unique.add(value);
+      }
+    });
+    return Array.from(unique);
+  }
+
   private buildCreatePayload(payload: Record<string, unknown>, fallbackUserId: string) {
     const id = typeof payload._id === 'string'
       ? payload._id

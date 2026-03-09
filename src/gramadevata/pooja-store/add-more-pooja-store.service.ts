@@ -6,6 +6,7 @@ import type { CreationAttributes } from 'sequelize';
 import nodemailer from 'nodemailer';
 import { AddMorePoojaStore } from './add-pooja-store.model';
 import { Register as User } from '../auth/user.model';
+import { PoojaStore } from './pooja-store.model';
 
 type CreateResult = {
   status: number;
@@ -17,6 +18,8 @@ export class AddMorePoojaStoreService {
   constructor(
     @InjectModel(AddMorePoojaStore)
     private readonly addMorePoojaStoreModel: typeof AddMorePoojaStore,
+    @InjectModel(PoojaStore)
+    private readonly poojaStoreModel: typeof PoojaStore,
     @InjectModel(User)
     private readonly userModel: typeof User,
     private readonly configService: ConfigService
@@ -104,6 +107,166 @@ export class AddMorePoojaStoreService {
 
     await record.destroy();
     return true;
+  }
+
+  async mergePoojaStoreDetails(
+    poojaStoreId: string,
+    payload: Record<string, unknown>,
+  ): Promise<CreateResult> {
+    try {
+      const store = await this.poojaStoreModel.findByPk(poojaStoreId);
+      if (!store) {
+        return { status: 404, body: { message: 'Pooja Store not found' } };
+      }
+
+      const newDesc = typeof payload.desc === 'string' ? payload.desc.trim() : '';
+      const newImages = this.parseListField(payload.image_location ?? payload.imageLocation);
+      const newMapLocation = this.cleanMapLocation(payload.map_location ?? payload.mapLocation);
+
+      const oldDesc = '';
+      const oldImages = this.parseListField(store.imageLocation);
+      const oldMapLocation = this.cleanMapLocation(store.mapLocation);
+
+      const details = await this.addMorePoojaStoreModel.findAll({ where: { poojaStoreId } });
+
+      const allDescs: string[] = [];
+      const allImages: string[] = [];
+      const allMapLocations: string[] = [];
+
+      for (const detail of details) {
+        if (detail.desc) {
+          allDescs.push(detail.desc.trim());
+        }
+        allImages.push(...this.parseListField(detail.imageLocation));
+        allMapLocations.push(...this.cleanMapLocation(detail.mapLocation));
+      }
+
+      const mergedDesc = this.uniqueStrings([oldDesc, ...allDescs, newDesc].filter(Boolean)).join(', ');
+      const mergedImages = this.uniqueStrings([...oldImages, ...allImages, ...newImages]);
+      const mergedMapLocation = this.uniqueStrings([
+        ...oldMapLocation,
+        ...allMapLocations,
+        ...newMapLocation,
+      ]);
+
+      store.imageLocation = mergedImages as unknown as PoojaStore['imageLocation'];
+      store.mapLocation = JSON.stringify(mergedMapLocation);
+      store.status = 'ACTIVE';
+      await store.save();
+
+      if (details.length) {
+        await this.addMorePoojaStoreModel.destroy({ where: { poojaStoreId } });
+      }
+
+      await this.addMorePoojaStoreModel.create({
+        poojaStoreId,
+        desc: mergedDesc,
+        imageLocation: mergedImages,
+        mapLocation: JSON.stringify(mergedMapLocation),
+        status: 'ACTIVE',
+      } as CreationAttributes<AddMorePoojaStore>);
+
+      const base = this.configService.get<string>('File_path');
+      const baseUrl = base ? `${base}/` : '';
+
+      return {
+        status: 200,
+        body: {
+          pooja_store_id: store.id,
+          name: store.name,
+          desc: mergedDesc,
+          image_location: mergedImages.map((img) => `${baseUrl}${img}`),
+          map_location: mergedMapLocation,
+          status: 'ACTIVE',
+        },
+      };
+    } catch (error) {
+      return {
+        status: 500,
+        body: { message: 'Error occurred', error: error instanceof Error ? error.message : String(error) },
+      };
+    }
+  }
+
+  private parseListField(raw: unknown): string[] {
+    if (Array.isArray(raw)) {
+      return raw.map((item) => String(item).trim()).filter(Boolean);
+    }
+
+    if (!raw) {
+      return [];
+    }
+
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => String(item).trim()).filter(Boolean);
+        }
+      } catch {
+        // ignore
+      }
+
+      return raw
+        .replace(/\[|\]/g, '')
+        .split(',')
+        .map((item) => item.replace(/['\"]+/g, '').trim())
+        .filter(Boolean);
+    }
+
+    return [];
+  }
+
+  private cleanMapLocation(raw: unknown): string[] {
+    const results: string[] = [];
+
+    const ingest = (value: unknown) => {
+      if (!value) {
+        return;
+      }
+      if (Array.isArray(value)) {
+        value.forEach((item) => ingest(item));
+        return;
+      }
+      if (typeof value !== 'string') {
+        return;
+      }
+
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return;
+      }
+
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          ingest(parsed);
+          return;
+        } catch {
+          // ignore
+        }
+      }
+
+      const cleaned = trimmed.replace(/\\/g, '').replace(/^["']+|["']+$/g, '');
+      const match = cleaned.match(/https:\/\/maps\.app\.goo\.gl\/\S+/);
+      if (match) {
+        results.push(match[0]);
+      }
+    };
+
+    ingest(raw);
+
+    return this.uniqueStrings(results);
+  }
+
+  private uniqueStrings(values: string[]) {
+    const unique = new Set<string>();
+    values.forEach((value) => {
+      if (value) {
+        unique.add(value);
+      }
+    });
+    return Array.from(unique);
   }
 
   private async findUser(userPayload?: Record<string, unknown>) {

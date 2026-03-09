@@ -19,6 +19,9 @@ export class AddRestaurantDetails extends Model<AddRestaurantDetails> {
   @Column({ type: DataType.JSON, allowNull: true, defaultValue: [], field: 'image_location' })
   declare imageLocation?: unknown;
 
+  @Column({ type: DataType.JSON, allowNull: true, field: 'event_video', defaultValue: [] })
+  declare eventVideo?: unknown;
+
   @Column({ type: DataType.STRING(255), allowNull: true, field: 'map_location' })
   declare mapLocation?: string;
 

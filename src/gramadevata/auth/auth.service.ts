@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
 import * as jwt from 'jsonwebtoken';
@@ -132,6 +132,88 @@ export class AuthService {
     }
 
     return this.toAdminProfileResponse(user);
+  }
+
+  async ssoLogin(token?: string): Promise<Record<string, unknown>> {
+    if (!token) {
+      throw new BadRequestException('Token missing');
+    }
+
+    const secret = this.configService.get<string>('SSO_JWT_SECRET');
+    if (!secret) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    try {
+      const payload = jwt.verify(token, secret) as Record<string, unknown>;
+      const rawUserId = payload.user_id ?? payload.id;
+      const userId = typeof rawUserId === 'number'
+        ? String(rawUserId)
+        : typeof rawUserId === 'string'
+          ? rawUserId
+          : undefined;
+      const username = typeof payload.username === 'string' ? payload.username : undefined;
+      const email = typeof payload.email === 'string' ? payload.email : undefined;
+      const contactNumber = typeof payload.contact_number === 'string'
+        ? payload.contact_number
+        : typeof payload.contactNumber === 'string'
+          ? payload.contactNumber
+          : undefined;
+
+      if (!userId) {
+        throw new UnauthorizedException('Invalid or expired token');
+      }
+
+      let user = await this.userModel.findByPk(userId);
+
+      if (!user) {
+        const safeUsername = username || email || contactNumber || userId;
+        const createPayload: CreationAttributes<User> = {
+          id: userId,
+          username: safeUsername,
+          ...(email ? { email } : {}),
+          ...(contactNumber ? { contactNumber } : {}),
+          status: UserStatus.ACTIVE,
+        } as CreationAttributes<User>;
+
+        user = await this.userModel.create(createPayload);
+      }
+
+      const tokens = this.buildTokens(user);
+
+      return {
+        refresh: tokens.refresh,
+        access: tokens.access,
+        message: 'SSO Login Success',
+      };
+    } catch {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+  }
+
+  async refreshToken(payload: Record<string, unknown>): Promise<Record<string, string>> {
+    const refresh = typeof payload.refresh === 'string' ? payload.refresh.trim() : '';
+    if (!refresh) {
+      throw new BadRequestException('refresh is required');
+    }
+
+    const secret = this.configService.get<string>('JWT_SECRET') || 'change-me';
+
+    try {
+      const decoded = jwt.verify(refresh, secret) as Record<string, unknown>;
+      const accessPayload = {
+        user_id: decoded.user_id,
+        username: decoded.username,
+        email: decoded.email,
+        contact_number: decoded.contact_number,
+        source: decoded.source ?? 'gramadevata',
+      };
+
+      const access = jwt.sign(accessPayload, secret, { expiresIn: '1h' });
+      return { access };
+    } catch {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
   }
 
   private generateOtp(length = 4) {

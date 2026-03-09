@@ -1,11 +1,15 @@
-import { Controller, Get, Param, Query, Res } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req, Res, Body, Put, HttpException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { VillagesService } from './villages.service';
+import { AddVillageDetailsService } from './add-village-details.service';
 
 @Controller('gramadevata')
 @ApiTags('Villages')
 export class VillagesExtrasController {
-  constructor(private readonly villagesService: VillagesService) {}
+  constructor(
+    private readonly villagesService: VillagesService,
+    private readonly addVillageDetailsService: AddVillageDetailsService
+  ) {}
 
   @Get('search_village')
   async searchVillage(@Query() query: Record<string, string | undefined>) {
@@ -40,5 +44,30 @@ export class VillagesExtrasController {
     }
 
     return res.json(result);
+  }
+
+  @Get('villages_by_location')
+  async getByLocation(
+    @Query() query: Record<string, string | undefined>,
+    @Req() req: { protocol?: string; get?: (name: string) => string | undefined; path?: string; originalUrl?: string }
+  ) {
+    const basePath = req.originalUrl ? req.originalUrl.split('?')[0] : req.path ?? '';
+    const host = req.get?.('host');
+    const protocol = req.protocol ?? 'http';
+    const baseUrl = host ? `${protocol}://${host}${basePath}` : basePath;
+
+    return this.villagesService.getByLocation(query, baseUrl);
+  }
+
+  @Put('mergevillage/:village_id')
+  async mergeVillage(
+    @Param('village_id') villageId: string,
+    @Body() payload: Record<string, unknown>
+  ) {
+    const result = await this.addVillageDetailsService.mergeVillageDetails(villageId, payload ?? {});
+    if (result.status !== 200) {
+      throw new HttpException(result.body, result.status);
+    }
+    return result.body;
   }
 }

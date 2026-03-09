@@ -15,11 +15,15 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { NearbyHospitalService } from './nearby-hospital.service';
+import { AddMoreHospitalService } from './add-more-hospital.service';
 
 @ApiTags('Nearby Hospitals')
 @Controller('gramadevata/nearby_hospitals')
 export class NearbyHospitalController {
-	constructor(private readonly nearbyHospitalService: NearbyHospitalService) {}
+	constructor(
+		private readonly nearbyHospitalService: NearbyHospitalService,
+		private readonly addMoreHospitalService: AddMoreHospitalService,	
+	) {}
 
 	@Get()
 	async list(@Query() query: Record<string, string | undefined>) {
@@ -79,5 +83,22 @@ export class NearbyHospitalController {
 			throw new HttpException('Nearby Hospital not found', HttpStatus.NOT_FOUND);
 		}
 		return;
+	}
+
+	@Put('nearby_hospital_merge/:hospital_id')
+	async mergeNearbyHospital(
+		@Param('hospital_id') hospitalId: string,
+		@Body() payload: Record<string, unknown>
+	) {
+		const result = await this.addMoreHospitalService.mergeHospitalDetails(hospitalId, payload ?? {});
+		if (result.status !== 200) {
+		throw new HttpException(result.body, result.status);
+		}
+		return result.body;
+	}
+
+	@Get('hospitals_by_location')
+	async getByLocation(@Query() query: Record<string, string | undefined>) {
+		return this.nearbyHospitalService.getByLocation(query);
 	}
 }

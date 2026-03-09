@@ -9,6 +9,7 @@ import {
   Param,
   Post,
   Put,
+  Patch,
   Query,
   Req,
 } from '@nestjs/common';
@@ -48,6 +49,15 @@ export class BloodBankController {
 
   @Put('blood_bank/:id')
   async update(@Param('id') id: string, @Body() payload: Record<string, unknown>) {
+    const updated = await this.bloodBankService.update(id, payload);
+    if (!updated) {
+      throw new NotFoundException({ message: 'BloodBank not found', status: 404 });
+    }
+    return updated;
+  }
+
+  @Patch('blood_bank/:id')
+  async updatePartial(@Param('id') id: string, @Body() payload: Record<string, unknown>) {
     const updated = await this.bloodBankService.update(id, payload);
     if (!updated) {
       throw new NotFoundException({ message: 'BloodBank not found', status: 404 });

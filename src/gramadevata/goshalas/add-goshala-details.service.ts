@@ -7,6 +7,7 @@ import nodemailer from 'nodemailer';
 import { AddGoshalaDetails } from './add-ghoshala.model';
 import { Register as User } from '../auth/user.model';
 import { Goshala } from './goshala.model';
+import { Village } from '../villages/village.model';
 
 type CreateResult = {
   status: number;

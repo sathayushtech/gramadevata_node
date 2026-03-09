@@ -1,8 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
-import type { CreationAttributes, WhereOptions } from 'sequelize';
-import { PoojaStore } from './pooja-store.model';
+import { Op, type CreationAttributes, type WhereOptions } from 'sequelize';
+import { PoojaStore } from './pooja-store.model';import { Village } from '../villages/village.model';
+import { Block } from '../block/block.model';
+import { District } from '../../common/models/district.model';
+import { State } from '../../common/models/state.model';
+import { Country } from '../../common/models/country.model';
 import * as GramadevataUtils from '../../common/utils/gramadevata.utils';
 
 type ServiceResult = {
@@ -114,6 +118,141 @@ export class PoojaStoreService {
 
 		await record.destroy();
 		return true;
+	}
+
+	async getByLocation(query: Record<string, string | undefined>) {
+		const inputValue = query.input_value;
+		if (!inputValue) {
+			throw new BadRequestException('input_value is required');
+		}
+
+		const searchQuery = (query.search ?? '').trim();
+		const where: Record<string, unknown> & { [Op.and]?: unknown[]; [Op.or]?: unknown } = {
+			status: 'ACTIVE',
+			[Op.or]: [
+				{ '$village.block.district.state.country.id$': inputValue },
+				{ '$village.block.district.state.id$': inputValue },
+				{ '$village.block.district.id$': inputValue },
+				{ '$village.block.id$': inputValue },
+				{ '$village.id$': inputValue },
+			],
+		};
+
+		if (searchQuery) {
+			where[Op.and] = [
+				{
+					[Op.or]: [
+						{ name: { [Op.like]: `%${searchQuery}%` } },
+						{ address: { [Op.like]: `%${searchQuery}%` } },
+					],
+				},
+			];
+		}
+
+		let stores = await this.poojaStoreModel.findAll({
+			where,
+			include: this.getLocationInclude(),
+		});
+
+		if (!stores.length) {
+			const fallbackWhere: Record<string, unknown> & { [Op.or]?: unknown } = {
+				villageId: inputValue,
+				status: 'ACTIVE',
+			};
+			if (searchQuery) {
+				fallbackWhere[Op.or] = [
+					{ name: { [Op.like]: `%${searchQuery}%` } },
+					{ address: { [Op.like]: `%${searchQuery}%` } },
+				];
+			}
+			stores = await this.poojaStoreModel.findAll({
+				where: fallbackWhere,
+				include: this.getLocationInclude(),
+			});
+		}
+
+		return {
+			pooja_stores: stores.map((store) => this.toLocationResponse(store)),
+		};
+	}
+
+	private toLocationResponse(record: PoojaStore): Record<string, unknown> {
+		const baseUrl = this.getBaseUrl();
+		const village = record.village as Village | undefined;
+		return {
+			_id: record.id,
+			name: record.name ?? null,
+			image_location: this.mapFileList(record.imageLocation, baseUrl),
+			map_location: record.mapLocation ?? null,
+			address: record.address ?? null,
+			village_id: this.buildVillageHierarchy(village),
+		};
+	}
+
+	private buildVillageHierarchy(village?: Village | null) {
+		if (!village) {
+			return null;
+		}
+		const block = village.block as Block | undefined;
+		const district = block?.district as District | undefined;
+		const state = district?.state as State | undefined;
+		const country = state?.country as Country | undefined;
+
+		if (!block || !district || !state || !country) {
+			return {
+				_id: village.id,
+				name: village.name,
+			};
+		}
+
+		return {
+			_id: village.id,
+			name: village.name,
+			block: {
+				block_id: block.id,
+				name: block.name,
+				district: {
+					district_id: district.id,
+					name: district.name,
+					state: {
+						state_id: state.id,
+						name: state.name,
+						country: {
+							country_id: country.id,
+							name: country.name,
+						},
+					},
+				},
+			},
+		};
+	}
+
+	private getLocationInclude() {
+		return [
+			{
+				model: Village,
+				required: false,
+				include: [
+					{
+						model: Block,
+						required: false,
+						include: [
+							{
+								model: District,
+								required: false,
+								include: [
+									{
+										model: State,
+										required: false,
+										include: [{ model: Country, required: false }],
+									},
+								],
+							},
+						],
+					},
+				],
+			},
+		];
 	}
 
 	private buildFilters(query: Record<string, string | undefined>): WhereOptions<PoojaStore> {
