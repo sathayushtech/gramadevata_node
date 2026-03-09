@@ -312,22 +312,3 @@
 
 ---
 
-## Pending by Priority
-
-| Priority | Category | Pending | Notes |
-|----------|----------|---------|-------|
-| ✅ Done | Temple (inactive, merge, locations, detail) | 0 | Completed |
-| ✅ Done | Profile Management | 0 | Completed |
-| 🟡 Medium | Events (location-based) | 3 | Location queries |
-| 🟡 Medium | Goshala (location-based) | 2 | Location queries |
-| 🟡 Medium | Hospital (location + merge) | 2 | |
-| 🟡 Medium | Restaurant (location + merge) | 2 | |
-| 🟡 Medium | Pooja Store (location + merge) | 2 | |
-| 🟡 Medium | Village (location + merge) | 2 | |
-| 🟡 Medium | Share | 2 | |
-| 🟡 Medium | Auth (SSO + token refresh) | 2 | |
-| 🟢 Low | Blood Bank PATCH | 1 | Minor gap |
-| 🟢 Low | Comment PATCH | 1 | Minor gap |
-| 🟢 Low | Country GET by ID | 1 | Minor gap |
-| 🟢 Low | Home | 1 | |
-
