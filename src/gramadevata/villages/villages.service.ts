@@ -329,10 +329,16 @@ export class VillagesService {
       status: EntityStatus.ACTIVE,
     };
 
+    const fieldMap: Record<string, string> = {
+      block: 'blockId',
+      block_id: 'blockId',
+      _id: 'id',
+    };
+
     for (const [key, value] of Object.entries(query)) {
       if (value === undefined) continue;
       if (key === 'page' || key === 'page_size') continue;
-      const attr = this.snakeToCamel(key);
+      const attr = fieldMap[key] || this.snakeToCamel(key);
       // Don't allow overriding the ACTIVE restriction.
       if (attr === 'status') continue;
       filters[attr] = value;
@@ -781,14 +787,44 @@ export class VillagesService {
     const pageSize = 20;
     const offset = (page - 1) * pageSize;
 
-    const where: Record<string, unknown> & { [Op.or]?: unknown; [Op.and]?: unknown } = {
+    // Resolve the set of block IDs that match the given location id,
+    // whichever level (country/state/district/block) it belongs to.
+    // Doing this as a separate step avoids fragile 4-level-deep nested
+    // association `where` filters (which MySQL/Sequelize can fail to
+    // resolve correctly when combined with LIMIT/OFFSET pagination).
+    const blockIdSet = new Set<string>();
+
+    const [byBlockId, byDistrict, byState, byCountry] = await Promise.all([
+      Block.findAll({ attributes: ['id'], where: { id: inputValue } }),
+      Block.findAll({ attributes: ['id'], where: { districtId: inputValue } }),
+      Block.findAll({
+        attributes: ['id'],
+        include: [{ model: District, required: true, attributes: [], where: { stateId: inputValue } }],
+      }),
+      Block.findAll({
+        attributes: ['id'],
+        include: [
+          {
+            model: District,
+            required: true,
+            attributes: [],
+            include: [{ model: State, required: true, attributes: [], where: { countryId: inputValue } }],
+          },
+        ],
+      }),
+    ]);
+
+    byBlockId.forEach((b) => blockIdSet.add(b.id));
+    byDistrict.forEach((b) => blockIdSet.add(b.id));
+    byState.forEach((b) => blockIdSet.add(b.id));
+    byCountry.forEach((b) => blockIdSet.add(b.id));
+
+    const blockIds = Array.from(blockIdSet);
+
+
+    const where: Record<string, unknown> & { [Op.and]?: unknown } = {
       status: 'ACTIVE',
-      [Op.or]: [
-        { '$block.district.state.country.id$': inputValue },
-        { '$block.district.state.id$': inputValue },
-        { '$block.district.id$': inputValue },
-        { '$block.id$': inputValue },
-      ],
+      blockId: { [Op.in]: blockIds.length ? blockIds : [inputValue] },
     };
 
     if (search) {
@@ -801,7 +837,9 @@ export class VillagesService {
       }
     }
 
-    const { count, rows } = await this.villageModel.findAndCountAll({
+    const count = await this.villageModel.count({ where: where as any });
+
+    const rows = await this.villageModel.findAll({
       where,
       include: this.getLocationInclude(),
       attributes: ['id', 'name', 'imageLocation', 'blockId', 'precedence'],
@@ -816,6 +854,7 @@ export class VillagesService {
     const results = rows.map((village) => this.toLocationResponse(village));
 
     const response = this.buildFastPaginationResponse({
+
       count,
       page,
       pageSize,
